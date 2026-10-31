@@ -10,7 +10,7 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 
 ## Quick Context
 
-- Language: Python 3.13
+- Language: Python 3.14 (use explicit `uv run --python 3.14`)
 - Framework: LangChain + LangGraph (served by Agent Server)
 - Package Manager: uv
 
