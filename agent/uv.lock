@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.14.*"
 
 [[package]]
@@ -630,6 +630,35 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/19/d0/862f0f96b031dab7faa036679e2076bbd6a18ea06e34fb1400fca65b03f0/lazy_object_proxy-1.13.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:da9f1b8780678af93c4ddba46826166c53a25d8d71133fc818542bf7b481e033", size = 79497, upload-time = "2026-10-20T01:06:03.122Z" },
     { url = "https://files.pythonhosted.org/packages/d5/50/20454483d8f95a11710b951518f86aaaaaae9195982fe27c12eeed130660/lazy_object_proxy-1.13.0-cp314-cp314t-win_amd64.whl", hash = "sha256:f21b4711e6744d46a4672497ca2db390cbdb03241d9b1654bbf38dbbc4db2a5e", size = 26670, upload-time = "2026-10-17T16:37:50.977Z" },
     { url = "https://files.pythonhosted.org/packages/4a/df/c1ff843fd9c4978d9a50ef2bceda3897d71645d4127ec1413aa15204cb64/lazy_object_proxy-1.13.0-cp314-cp314t-win_arm64.whl", hash = "sha256:de295ae25e5c1fd712088547f251c4b2976d2f60df28057b6c416e771a99842b", size = 25297, upload-time = "2026-10-17T16:37:52.088Z" },
+]
+
+[[package]]
+name = "lessons-api"
+version = "0.1.0"
+source = { editable = "../api" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "tzdata" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.162.0" },
+    { name = "pydantic", specifier = ">=2.14.2" },
+    { name = "pydantic-settings", specifier = ">=2.16.2" },
+    { name = "tzdata", specifier = ">=2026.6" },
+    { name = "uvicorn", specifier = ">=0.54.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pip-audit", specifier = ">=2.10.1" },
+    { name = "pytest", specifier = ">=9.2.0" },
+    { name = "ruff", specifier = ">=0.17.3" },
 ]
 
 [[package]]
@@ -1338,13 +1367,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "fastapi" },
+    { name = "lessons-api" },
     { name = "pip-audit" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
-    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -1365,13 +1393,12 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "lessons-api", editable = "../api" },
     { name = "pip-audit", specifier = ">=2.10.1" },
     { name = "pre-commit", specifier = ">=4.6.2" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
     { name = "ruff", specifier = ">=0.8.0" },
-    { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 # tech-support-agent
 
-The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. Python CLI and a local lesson-booking API demonstrate the flow. A future orchestrator will connect this subgraph and a separate bug-fixing/PR agent to the existing Next.js/Clerk frontend; orchestration and frontend integration are outside this implementation.
+The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. Python CLI and the lessons API in `api/` (a separate uv project, package `lessons_api`) demonstrate the flow. A future orchestrator will connect this subgraph and a separate bug-fixing/PR agent to the existing Next.js/Clerk frontend; orchestration and frontend integration are outside this implementation.
 
 ## Role
 
@@ -13,9 +13,9 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 - Language: Python 3.14
 - Framework: LangGraph StateGraph, with an OpenAI-compatible chat model
 - Package Manager: uv
-- Run: `make demo-api` and `make agent` in separate terminals; `make test` and `make lint` verify the backend
+- Run: `make api` and `make agent` in separate terminals; `make test` and `make lint` verify both Python projects
 - API credentials belong only in trusted runtime context, never in model messages, checkpoints, or logs
-- Keep business-domain rules in demo/integration code, not in the generic graph or catalog
+- Keep business-domain rules in `api/` or integration code, not in the generic graph or catalog
 - Persist a dispatch receipt before a write; never automatically repeat an uncertain write
 - The embedding application owns authentication, thread access control, and serialized execution per thread
 

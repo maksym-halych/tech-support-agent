@@ -1,4 +1,4 @@
-"""Offline models and an isolated, deterministic demo API."""
+"""Offline models and an isolated, deterministic lessons API."""
 
 import json
 from collections.abc import Iterator, Sequence
@@ -13,9 +13,9 @@ from fastapi import FastAPI
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from lessons_api.app import create_app
 from pydantic import SecretStr
 
-from tech_support_agent.demo.api import create_demo_app
 from tech_support_agent.models import ApiConfig, ApiCredentials, SupportContext
 
 
@@ -29,9 +29,9 @@ def isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def demo_app() -> Iterator[FastAPI]:
-    app = create_demo_app(clock=lambda: datetime(2026, 10, 31, 9, tzinfo=UTC))
+    app = create_app(clock=lambda: datetime(2026, 10, 31, 9, tzinfo=UTC))
     yield app
-    app.state.connection.close()
+    app.state.store.close()
 
 
 @pytest.fixture

@@ -52,3 +52,4 @@ ignore/
 .cache/
 
 data/
+api/data/

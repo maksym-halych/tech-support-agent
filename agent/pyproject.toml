@@ -20,8 +20,6 @@ dependencies = [
 
 [project.scripts]
 support-chat = "tech_support_agent.cli:main"
-support-demo-api = "tech_support_agent.demo.api:main"
-support-export-openapi = "tech_support_agent.demo.api:export_openapi"
 
 [build-system]
 requires = ["uv_build>=0.8.15,<0.9.0"]
@@ -29,13 +27,12 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "fastapi>=0.115.0",
-    "uvicorn>=0.34.0",
     "pytest-asyncio>=1.0.0",
     "pip-audit>=2.10.1",
     "pre-commit>=4.6.2",
     "pytest>=9.0.3",
     "ruff>=0.8.0",
+    "lessons-api",
 ]
 
 [tool.ruff]
@@ -62,3 +59,6 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.uv.build-backend]
 module-name = "tech_support_agent"
 source-include = [".env.example", "examples/**", "tests/**"]
+
+[tool.uv.sources]
+lessons-api = { path = "../api", editable = true }

@@ -1,34 +1,39 @@
-.PHONY: help install agent demo-api export-openapi frontend test lint pre-commit
+.PHONY: help install api agent export-openapi frontend test lint pre-commit
 
 help:
 	@echo 'Targets:'
-	@echo '  install      Install Python agent and demo dependencies'
-	@echo '  agent        Start the support chat in the terminal'
-	@echo '  demo-api     Start the local booking API on port 8001'
-	@echo '  export-openapi  Refresh the demo OpenAPI document'
-	@echo '  frontend     Start the frontend (orchestrator connection pending)'
-	@echo '  test         Run all tests'
-	@echo '  pre-commit   Run all pre-commit hooks against every file'
+	@echo '  install         Install the API and agent dependencies'
+	@echo '  api             Start the lessons API on port 8001'
+	@echo '  agent           Start the support chat in the terminal'
+	@echo '  export-openapi  Refresh the agent example OpenAPI document from the API'
+	@echo '  frontend        Start the frontend (orchestrator connection pending)'
+	@echo '  test            Run all tests'
+	@echo '  lint            Run ruff over both Python projects'
+	@echo '  pre-commit      Run all pre-commit hooks against every file'
 
 install:
+	uv sync --directory api
 	uv sync --directory agent
+
+api:
+	uv run --directory api lessons-api
 
 agent:
 	uv run --directory agent support-chat
 
-demo-api:
-	uv run --directory agent support-demo-api
-
 export-openapi:
-	uv run --directory agent support-export-openapi
+	uv run --directory api lessons-api-export-openapi --output ../agent/examples/lessons.openapi.json
 
 frontend:
 	pnpm -C frontend dev
 
 test:
+	uv run --directory api python -m pytest tests -q
 	uv run --directory agent python -m pytest tests -q
 
 lint:
+	uv run --directory api ruff check src tests
+	uv run --directory api ruff format --check src tests
 	uv run --directory agent ruff check src tests
 	uv run --directory agent ruff format --check src tests
 

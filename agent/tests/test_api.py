@@ -167,30 +167,3 @@ async def test_credentials_and_api_key_reflections_are_redacted(
     ).execute(ApiRequest(operation_id="echo"), context)
     assert response.data == {"echo": "[REDACTED]"}
     assert "private-key" not in context.model_dump_json()
-
-
-async def test_demo_idempotency_conflict_and_user_isolation(
-    transport: httpx.ASGITransport,
-) -> None:
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://demo.test"
-    ) as client:
-        headers = {"Authorization": "Bearer demo-alice", "Idempotency-Key": "once"}
-        body = {"slot_id": "iryna:2026-11-03:14"}
-        first = await client.post("/me/bookings", headers=headers, json=body)
-        repeat = await client.post("/me/bookings", headers=headers, json=body)
-        assert first.status_code == repeat.status_code == 201
-        assert first.json()["id"] == repeat.json()["id"]
-        conflict = await client.post(
-            "/me/bookings", headers={**headers, "Idempotency-Key": "twice"}, json=body
-        )
-        assert conflict.status_code == 409
-        different = await client.post(
-            "/me/bookings", headers=headers, json={"slot_id": "oleh:2026-11-03:14"}
-        )
-        assert different.status_code == 409
-        bob = {"Authorization": "Bearer demo-bob"}
-        assert (await client.get("/me/bookings", headers=bob)).json() == []
-        assert (
-            await client.get(f"/me/bookings/{first.json()['id']}", headers=bob)
-        ).status_code == 404

@@ -30,13 +30,13 @@ agent/  Agent Server :2024  ─── tools forward the user's JWT ───▶ 
 | Write approval | `HumanInTheLoopMiddleware` interrupts before every create, book or cancel. The chat panel renders an approve/reject card. |
 | Authentication | The Clerk JWT is the only identity. The API and Agent Server both verify it against Clerk's JWKS. The agent forwards the caller's token to the API, so the API enforces the same permissions for UI and agent calls. The model never sees the token. |
 | Python | 3.14 for `agent/` and `api/`. `langgraph-cli[inmem]` 0.4.40 / `langgraph-api` 0.17.0 install on 3.14. |
-| Commits | One Conventional Commit per task on `feat/ai-support-agent`, not pushed. |
+| Commits | One Conventional Commit per task on `feat/ai-support-agent`, pushed after each task. |
 
 ## Tasks
 
 | # | Task | Depends on | Status |
 |---|---|---|---|
-| 1 | [Extract the API into `api/`](tasks/01-extract-api.md) | — | Planned |
+| 1 | [Extract the API into `api/`](tasks/01-extract-api.md) | — | Done |
 | 2 | [Roles, lessons and the lessons dashboard](tasks/02-roles-and-lessons.md) | 1 | Planned |
 | 3 | [Back to Agent Server with Clerk auth](tasks/03-agent-server.md) | 2 | Planned |
 | 4 | [Lesson tools with write approval](tasks/04-lesson-tools.md) | 3 | Planned |

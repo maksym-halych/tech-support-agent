@@ -16,10 +16,10 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import uvicorn
+from lessons_api.app import create_app
 
 from tech_support_agent.cli import run_chat
 from tech_support_agent.config import Settings
-from tech_support_agent.demo.api import create_demo_app
 from tests.conftest import call, finish, scripted_model
 
 
@@ -85,7 +85,7 @@ def main() -> None:
     data_root.mkdir(exist_ok=True)
     with TemporaryDirectory(prefix="smoke-", dir=data_root) as temporary:
         root = Path(temporary)
-        app = create_demo_app(root / "demo.sqlite")
+        app = create_app(root / "demo.sqlite")
         document = root / "openapi.json"
         document.write_text(json.dumps(app.openapi()), encoding="utf-8")
         with socket.socket() as listener:
@@ -113,7 +113,7 @@ def main() -> None:
                 thread.join(timeout=10)
                 if thread.is_alive():
                     raise RuntimeError("Demo server did not stop")
-                app.state.connection.close()
+                app.state.store.close()
 
 
 if __name__ == "__main__":

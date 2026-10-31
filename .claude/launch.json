@@ -8,9 +8,9 @@
       "port": 3000
     },
     {
-      "name": "demo-api",
+      "name": "api",
       "runtimeExecutable": "uv",
-      "runtimeArgs": ["run", "--directory", "agent", "support-demo-api"],
+      "runtimeArgs": ["run", "--directory", "api", "lessons-api"],
       "port": 8001
     }
   ]
