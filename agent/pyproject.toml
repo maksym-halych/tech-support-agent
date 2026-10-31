@@ -1,0 +1,49 @@
+[project]
+name = "tech-support-agent"
+version = "0.1.0"
+description = "Conversational tech support agent served by LangGraph Agent Server"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=1.3.10",
+    "langchain-openai>=1.7.3",
+    "langgraph>=1.0.0",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.0.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.15,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "langgraph-cli[inmem]>=0.4.10",
+    "pip-audit>=2.10.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.0.3",
+    "ruff>=0.8.0",
+]
+
+[tool.uv]
+# Studio tracing needs langgraph-api >= 0.11.0; it arrives transitively via
+# langgraph-cli[inmem], so pin a floor rather than depending on it directly.
+constraint-dependencies = ["langgraph-api>=0.14.1"]
+
+[tool.ruff]
+# pre-commit runs ruff from the repo root, so without this neither
+# ``tech_support_agent`` nor ``tests`` is recognised as first-party and the
+# import sorter folds them into the third-party block. These are ruff's own
+# defaults, re-anchored: paths are relative to this file, so they resolve to
+# ``agent/`` and ``agent/src``.
+src = [".", "src"]
+
+[tool.pytest.ini_options]
+# Tests import helpers via ``tests.conftest``, so ``agent/`` has to be
+# importable no matter how pytest is invoked — ``uv run pytest`` does not add it
+# the way ``python -m pytest`` does.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv.build-backend]
+module-name = "tech_support_agent"
+source-include = ["langgraph.json", ".env.example", "tests/**"]

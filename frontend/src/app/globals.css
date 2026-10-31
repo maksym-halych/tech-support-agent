@@ -1,0 +1,78 @@
+/* prettier-ignore */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 95%;
+    --card: 240 10% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+    --gradient-end: 199 89% 48%;
+    --gradient-mid: 217 91% 50%;
+    --gradient-text: 0 0% 95%;
+    --accent-vivid: 199 89% 48%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4% 12%;
+    --muted-foreground: 240 5% 65%;
+    --muted-foreground-strong: 240 4% 46%;
+    --accent: 240 4% 18%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --toast-destructive: 220 25% 35%;
+    --toast-destructive-foreground: 210 20% 92%;
+    --border: 240 4% 16%;
+    --input: 0 0% 91%;
+    --ring: 240 5% 84%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply relative overflow-hidden bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .shadow-inner-right {
+    box-shadow: inset -9px 0 6px -1px rgb(0 0 0 / 0.02);
+  }
+
+  .shadow-inner-left {
+    box-shadow: inset 9px 0 6px -1px rgb(0 0 0 / 0.02);
+  }
+}
+
+.scrollbar {
+  /* width */
+  &::-webkit-scrollbar {
+    width: 0.7rem;
+  }
+
+  /* Track */
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  /* Handle */
+  &::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-[#e9e9e9]/10;
+  }
+
+  /* Handle on hover */
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#e9e9e9]/20;
+  }
+}

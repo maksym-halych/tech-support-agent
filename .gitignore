@@ -1,0 +1,54 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# === Bytecode and runtime ===
+*.log
+*.pot
+*.mo
+*.pickle
+
+# === Virtual environments ===
+.venv/
+env/
+venv/
+
+# === IDEs and Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+
+# === Environment & Secrets ===
+.env
+*.secret
+*.token
+
+# === Pytest ===
+.pytest_cache/
+htmlcov/
+.coverage*
+coverage.xml
+
+# === Build / Dist ===
+build/
+dist/
+*.egg-info/
+*.spec
+
+# === Project Specific ===
+.langgraph_api/
+
+ignore/
+.cache/
+
+data/
