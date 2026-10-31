@@ -19,6 +19,7 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 - Lesson rules (who may book, cancel or create what) live in `api/`; the agent only proposes actions and the API enforces them
 - Every lesson write goes through `HumanInTheLoopMiddleware`; never add a write tool without adding it to `WRITE_TOOLS` and the approval middleware
 - Frontend checks: `pnpm -C frontend lint`, `pnpm -C frontend format:check`, `pnpm -C frontend build`
+- Feature docs live in `docs/features/<feature>/` (10 files each, ASD-STE100 English). Read the feature's docs before you change it. After a code change, check the touched features through their `entry-points.json`; if the docs no longer match the code, ask "Update the feature docs?" and, on yes, update them in the same commit. See `docs/features/README.md`
 
 ## Coding Conventions
 

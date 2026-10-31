@@ -1,0 +1,20 @@
+{
+  "feature": "sign-in-and-roles",
+  "entry_points": [
+    {"app": "frontend", "kind": "middleware", "name": "Page protection", "file": "frontend/src/middleware.ts"},
+    {"app": "frontend", "kind": "page", "name": "/sign-in", "file": "frontend/src/app/sign-in/[[...sign-in]]/page.tsx"},
+    {"app": "frontend", "kind": "client", "name": "Token on each Agent Server request", "file": "frontend/src/providers/client.ts", "symbol": "createClient"},
+    {"app": "frontend", "kind": "client", "name": "Token on each lessons API request", "file": "frontend/src/lib/lessons-api.ts", "symbol": "createLessonsApi"},
+    {"app": "api", "kind": "dependency", "name": "Verify the session token", "file": "api/src/lessons_api/auth.py", "symbol": "verified_caller"},
+    {"app": "api", "kind": "dependency", "name": "Record the caller", "file": "api/src/lessons_api/app.py", "symbol": "current_caller"},
+    {"app": "api", "kind": "http", "name": "GET /me", "file": "api/src/lessons_api/app.py", "symbol": "get_me"},
+    {"app": "api", "kind": "cli", "name": "lessons-api-role (make users, make teacher, make student)", "file": "api/src/lessons_api/roles.py", "symbol": "main"},
+    {"app": "agent", "kind": "auth", "name": "Agent Server authentication", "file": "agent/src/tech_support_agent/auth.py", "symbol": "authenticate"},
+    {"app": "agent", "kind": "auth", "name": "Thread and run ownership", "file": "agent/src/tech_support_agent/auth.py", "symbol": "on_thread_access"}
+  ],
+  "tests": [
+    "api/tests/test_auth.py",
+    "api/tests/test_roles.py",
+    "agent/tests/test_auth.py"
+  ]
+}
