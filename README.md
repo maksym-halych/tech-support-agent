@@ -2,9 +2,70 @@
 
 Three apps for the PolyTech Code Fest project: a lessons API (`api/`), a lesson assistant served by LangGraph Agent Server (`agent/`) and a Next.js/Clerk frontend (`frontend/`). Teachers open lesson slots, students book them, and either side can cancel. The refactor is planned and tracked task by task in [`docs/`](docs/README.md).
 
+## Getting started
+
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/). It installs Python 3.14 for `api/` and `agent/` if you don't have it.
+- Node.js 20.9 or newer and pnpm 10 (`corepack enable` picks up the version pinned in `frontend/package.json`).
+- A [Clerk](https://clerk.com) application; a development instance is enough.
+- An API key for OpenAI or another OpenAI-compatible provider, such as OpenRouter.
+
+### 1. Install dependencies
+
+```sh
+make install               # uv sync for api/ and agent/
+pnpm -C frontend install
+```
+
+### 2. Configure Clerk
+
+Once per Clerk instance, in the Clerk dashboard:
+
+1. Sessions → Customize session token → add `{"role": "{{user.public_metadata.role}}", "name": "{{user.full_name}}", "email": "{{user.primary_email_address}}"}`.
+2. API keys → note the Frontend API URL, the publishable key and the secret key for the next step.
+
+### 3. Create the `.env` files
+
+```sh
+cp api/.env.example api/.env
+cp agent/.env.example agent/.env
+cp frontend/.env.example frontend/.env
+```
+
+| File | Set |
+|---|---|
+| `api/.env` | `LESSONS_API_CLERK_ISSUER` to the Frontend API URL |
+| `agent/.env` | `CLERK_ISSUER` to the Frontend API URL, `OPENAI_API_KEY`, and `OPENAI_BASE_URL` and `AGENT_MODEL` for a provider other than OpenAI |
+| `frontend/.env` | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` |
+
+The remaining defaults already point the apps at each other on localhost. Keep `LANGSMITH_TRACING=false` unless you have a LangSmith key. If the frontend runs on an origin other than `http://localhost:3000`, add it to `LESSONS_API_CORS_ORIGINS` and `LESSONS_API_CLERK_AUTHORIZED_PARTIES` in `api/.env` and to `CLERK_AUTHORIZED_PARTIES` in `agent/.env`.
+
+### 4. Start the apps
+
+Run each in its own terminal from the repository root:
+
+```sh
+make api        # lessons API on http://127.0.0.1:8001, Swagger at /docs
+make agent      # Agent Server on http://127.0.0.1:2024
+make frontend   # Next.js on http://localhost:3000
+```
+
+### 5. Sign in and pick a role
+
+Open http://localhost:3000 and sign in. Every new user is a student. To try the teacher side, make a user a teacher, then have them sign out and back in so their session token carries the new role:
+
+```sh
+make users                           # list Clerk users and their roles
+make teacher EMAIL=you@example.com   # make a user a teacher
+make student EMAIL=you@example.com   # make them a student again
+```
+
+These commands read `CLERK_SECRET_KEY` from `frontend/.env`. You can also set the user's public metadata to `{"role": "teacher"}` in the Clerk dashboard (Users → user → Metadata).
+
 ## Lessons API
 
-FastAPI and SQLite, package `lessons_api`. Every request needs a Clerk session token as `Authorization: Bearer`. The API verifies it against the Clerk instance's JWKS (signature, `iss`, `exp`, `nbf`, and `azp` when configured) and records the caller as a user. The token's `role` claim decides the role: only `teacher` makes a teacher, anything else is a student. See [docs/README.md](docs/README.md#local-setup-after-the-refactor) for the Clerk session-token customisation.
+FastAPI and SQLite, package `lessons_api`. Every request needs a Clerk session token as `Authorization: Bearer`. The API verifies it against the Clerk instance's JWKS (signature, `iss`, `exp`, `nbf`, and `azp` when configured) and records the caller as a user. The token's `role` claim decides the role: only `teacher` makes a teacher, anything else is a student. See [Configure Clerk](#2-configure-clerk) for the session-token customisation.
 
 To make a Clerk user a teacher from the CLI, run `make teacher EMAIL=...` (`make users` lists users and roles). It reads `CLERK_SECRET_KEY` from `frontend/.env`.
 
@@ -50,16 +111,6 @@ make agent                         # Agent Server on http://127.0.0.1:2024
 - Tools: `list_my_lessons` and `cancel_lesson` for everyone, `list_teachers`, `find_available_lessons` and `book_lesson` for students, `create_lesson` for teachers, plus `get_current_datetime`. The model only sees its role's tools, and the API enforces roles anyway. Tool calls are capped at 10 per run.
 - Every `book_lesson`, `create_lesson` and `cancel_lesson` call pauses the run with a LangChain `HITLRequest` (`action_requests` with a plain-language `description`, `review_configs` allowing `approve` and `reject`). Resume the thread with `Command(resume={"decisions": [{"type": "approve"}]})` or `{"type": "reject", "message": "..."}`; nothing changes until a write is approved.
 - The user's session token travels with each run so the agent's tools can call the lessons API as that user. It is never part of graph state, checkpoints or model messages; Agent Server keeps it in the run record, readable only by the thread's owner, and it expires about a minute after it was minted. The frontend mints a fresh token for every request that starts a run.
-
-## Run everything
-
-Do the Clerk setup in [docs/README.md](docs/README.md#local-setup-after-the-refactor) once, fill in the three `.env` files, then in three terminals:
-
-```sh
-make api        # lessons API on :8001
-make agent      # Agent Server on :2024
-make frontend   # Next.js on :3000
-```
 
 ## Verify and develop
 
