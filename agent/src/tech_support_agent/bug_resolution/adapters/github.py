@@ -81,9 +81,14 @@ async def execute(command: Command) -> CommandOutput:
 
     async def send() -> None:
         assert process.stdin is not None
-        process.stdin.write(command.stdin)
-        await process.stdin.drain()
-        process.stdin.close()
+        try:
+            process.stdin.write(command.stdin)
+            await process.stdin.drain()
+        except BrokenPipeError, ConnectionResetError:
+            # The child can exit before it reads stdin; its exit code decides.
+            pass
+        finally:
+            process.stdin.close()
 
     assert process.stdout is not None and process.stderr is not None
     tasks = [
