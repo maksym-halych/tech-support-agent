@@ -1,20 +1,22 @@
-"""Tool: the current date and time, for reasoning about timestamps in logs and errors."""
+"""Trusted local time for interpreting relative dates."""
 
-from datetime import UTC, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-from langchain_core.tools import tool
+from tech_support_agent.models import BoundaryModel
 
 
-@tool
-def get_current_datetime() -> str:
-    """
-    Get the current date and time in UTC.
+class CurrentDatetime(BoundaryModel):
+    """Current ISO timestamp and its IANA timezone."""
 
-    Use it when the user's problem depends on the current time: an expired
-    certificate, a log timestamp, or how long ago something happened.
+    datetime: str
+    timezone: str
 
-    Returns:
-        The current UTC time in ISO 8601 format.
-    """
 
-    return datetime.now(UTC).isoformat(timespec="seconds")
+def get_current_datetime(timezone: str = "Europe/Kyiv") -> CurrentDatetime:
+    """Return the current time in the supplied IANA timezone."""
+
+    return CurrentDatetime(
+        datetime=datetime.now(ZoneInfo(timezone)).isoformat(timespec="seconds"),
+        timezone=timezone,
+    )

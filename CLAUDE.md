@@ -1,6 +1,6 @@
 # tech-support-agent
 
-The objective of this project is to develop a conversational tech support agent: a user describes a problem with their device, software, account or network in natural language, and the agent diagnoses it and walks them through a fix across follow-up turns. It runs as a LangGraph graph served by Agent Server (`agent/`), with a Next.js chat frontend based on Agent Chat UI (`frontend/`) that signs users in with Clerk.
+The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. Python CLI and a local lesson-booking API demonstrate the flow. A future orchestrator will connect this subgraph and a separate bug-fixing/PR agent to the existing Next.js/Clerk frontend; orchestration and frontend integration are outside this implementation.
 
 ## Role
 
@@ -10,9 +10,14 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 
 ## Quick Context
 
-- Language: Python 3.13
-- Framework: LangChain + LangGraph (served by Agent Server)
+- Language: Python 3.14
+- Framework: LangGraph StateGraph, with an OpenAI-compatible chat model
 - Package Manager: uv
+- Run: `make demo-api` and `make agent` in separate terminals; `make test` and `make lint` verify the backend
+- API credentials belong only in trusted runtime context, never in model messages, checkpoints, or logs
+- Keep business-domain rules in demo/integration code, not in the generic graph or catalog
+- Persist a dispatch receipt before a write; never automatically repeat an uncertain write
+- The embedding application owns authentication, thread access control, and serialized execution per thread
 
 ## Coding Conventions
 

@@ -1,8 +1,9 @@
 """Runtime configuration for the agent."""
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,23 @@ class Settings(BaseSettings):
     # that provider's. Secret.
     openai_api_key: SecretStr = SecretStr("")
     openai_base_url: str = "https://api.openai.com/v1"
+
+    support_openapi_path: Path = Path("examples/lessons.openapi.json")
+    support_api_base_url: str = "http://127.0.0.1:8001"
+    support_idempotency_header: str | None = "Idempotency-Key"
+    support_user_id: str = "alice"
+    support_timezone: str = "Europe/Kyiv"
+    support_api_token: SecretStr = SecretStr("demo-alice")
+    support_api_keys: dict[str, SecretStr] = Field(default_factory=dict)
+    support_checkpoint_path: Path = Path("data/support.sqlite")
+    support_journal_path: Path = Path("data/actions.sqlite")
+
+    @field_validator("support_idempotency_header", mode="before")
+    @classmethod
+    def empty_header_means_disabled(cls, value: str | None) -> str | None:
+        """Allow an empty environment variable to disable idempotency headers."""
+
+        return value or None
 
 
 @lru_cache

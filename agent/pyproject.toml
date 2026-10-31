@@ -1,15 +1,27 @@
 [project]
 name = "tech-support-agent"
 version = "0.1.0"
-description = "Conversational tech support agent served by LangGraph Agent Server"
-requires-python = ">=3.13"
+description = "OpenAPI-driven support subgraph with explicit approval of API writes"
+requires-python = ">=3.14,<3.15"
 dependencies = [
     "langchain>=1.3.10",
     "langchain-openai>=1.7.3",
     "langgraph>=1.0.0",
     "pydantic-settings>=2.15.0",
     "python-dotenv>=1.0.1",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.0",
+    "pyyaml>=6.0.2",
+    "openapi-spec-validator>=0.7.2",
+    "openapi-schema-validator>=0.6.3",
+    "langgraph-checkpoint-sqlite>=3.0.0",
+    "tzdata>=2025.2",
 ]
+
+[project.scripts]
+support-chat = "tech_support_agent.cli:main"
+support-demo-api = "tech_support_agent.demo.api:main"
+support-export-openapi = "tech_support_agent.demo.api:export_openapi"
 
 [build-system]
 requires = ["uv_build>=0.8.15,<0.9.0"]
@@ -17,19 +29,17 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "langgraph-cli[inmem]>=0.4.10",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "pytest-asyncio>=1.0.0",
     "pip-audit>=2.10.1",
     "pre-commit>=4.6.2",
     "pytest>=9.0.3",
     "ruff>=0.8.0",
 ]
 
-[tool.uv]
-# Studio tracing needs langgraph-api >= 0.11.0; it arrives transitively via
-# langgraph-cli[inmem], so pin a floor rather than depending on it directly.
-constraint-dependencies = ["langgraph-api>=0.14.1"]
-
 [tool.ruff]
+target-version = "py314"
 # pre-commit runs ruff from the repo root, so without this neither
 # ``tech_support_agent`` nor ``tests`` is recognised as first-party and the
 # import sorter folds them into the third-party block. These are ruff's own
@@ -37,13 +47,18 @@ constraint-dependencies = ["langgraph-api>=0.14.1"]
 # ``agent/`` and ``agent/src``.
 src = [".", "src"]
 
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
 [tool.pytest.ini_options]
 # Tests import helpers via ``tests.conftest``, so ``agent/`` has to be
 # importable no matter how pytest is invoked — ``uv run pytest`` does not add it
 # the way ``python -m pytest`` does.
 pythonpath = ["."]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.uv.build-backend]
 module-name = "tech_support_agent"
-source-include = ["langgraph.json", ".env.example", "tests/**"]
+source-include = [".env.example", "examples/**", "tests/**"]
