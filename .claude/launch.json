@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "frontend", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "graph",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "agent", "langgraph", "dev", "--no-browser"],
+      "port": 2024
+    }
+  ]
+}
