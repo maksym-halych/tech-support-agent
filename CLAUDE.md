@@ -1,6 +1,6 @@
 # tech-support-agent
 
-A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app with the lessons dashboard and the agent chat. The ongoing refactor is planned task by task in `docs/`; follow it and update its status column when a task is done.
+A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app: the lessons dashboard plus a right-side chat panel that talks to Agent Server through the LangGraph SDK and shows an approval card for every write. The refactor that produced this layout is documented task by task in `docs/`; keep its notes in sync when you change these areas.
 
 ## Role
 
@@ -17,6 +17,8 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 - Identity is the Clerk session JWT only. The API and Agent Server both verify it; the role comes from the `role` claim and only `teacher` makes a teacher
 - The agent acts as the signed-in user; the user's token must never reach model messages, graph state, checkpoints or logs
 - Lesson rules (who may book, cancel or create what) live in `api/`; the agent only proposes actions and the API enforces them
+- Every lesson write goes through `HumanInTheLoopMiddleware`; never add a write tool without adding it to `WRITE_TOOLS` and the approval middleware
+- Frontend checks: `pnpm -C frontend lint`, `pnpm -C frontend format:check`, `pnpm -C frontend build`
 
 ## Coding Conventions
 

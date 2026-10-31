@@ -140,6 +140,18 @@ async def test_new_threads_and_runs_are_stamped_with_their_owner() -> None:
     assert thread_filter == run_filter == {"owner": "user_alice"}
 
 
+async def test_owner_is_stamped_into_the_servers_own_metadata_dict() -> None:
+    for metadata in ({}, {"owner": "user_bob"}):
+        value: dict[str, Any] = {"metadata": metadata}
+        await agent_auth.on_thread_create(_ctx("threads", "create"), value)
+        # The server reads the dict it passed in, so it must be the same object.
+        assert value["metadata"] is metadata
+        assert metadata == {"owner": "user_alice"}
+    missing: dict[str, Any] = {"metadata": None}
+    await agent_auth.on_run_create(_ctx("threads", "create_run"), missing)
+    assert missing["metadata"] == {"owner": "user_alice"}
+
+
 async def test_thread_reads_are_filtered_by_owner() -> None:
     for action in ("read", "update", "delete", "search"):
         assert await agent_auth.on_thread_access(_ctx("threads", action), {}) == {

@@ -1,8 +1,7 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import Link from "next/link";
-import { AlertCircle, MessageSquare, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { AppLogo, APP_NAME } from "@/components/icons/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLessons } from "@/hooks/use-lessons";
 import { LESSONS_API_URL } from "@/lib/lessons-api";
+import { cn } from "@/lib/utils";
+import { useChatOpen } from "@/components/chat-panel/use-chat-open";
 import { LessonSchedule } from "./LessonSchedule";
 
 const userButtonAppearance = {
@@ -33,16 +34,6 @@ function Header() {
             </Badge>
           </div>
         )}
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-        >
-          <Link href="/chat">
-            <MessageSquare />
-            Assistant
-          </Link>
-        </Button>
         <UserButton appearance={userButtonAppearance} />
       </div>
     </header>
@@ -88,6 +79,7 @@ function ErrorState({ message }: { message: string }) {
 
 export function Dashboard() {
   const { me, lessons, loading, error, refresh } = useLessons();
+  const [chatOpen] = useChatOpen();
   const title = me?.role === "teacher" ? "My schedule" : "My lessons";
   const subtitle =
     me?.role === "teacher"
@@ -95,10 +87,16 @@ export function Dashboard() {
       : "Upcoming lessons you have booked.";
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div
+      className={cn(
+        "flex h-dvh flex-col transition-[padding] duration-300",
+        // Leave room for the chat panel on wide screens.
+        chatOpen && "md:pr-[420px]",
+      )}
+    >
       <Header />
       <main className="scrollbar flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-24 pt-8 sm:px-6">
           <div className="flex items-end justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">

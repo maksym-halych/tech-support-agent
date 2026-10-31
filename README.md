@@ -26,7 +26,13 @@ Missing or invalid token → 401, wrong role → 403, unknown or invisible lesso
 
 ## Frontend
 
-Copy `frontend/.env.example` to `frontend/.env`, set the Clerk keys and `NEXT_PUBLIC_LESSONS_API_URL` (default `http://localhost:8001`), then `make frontend`. After signing in, `/` shows the lessons dashboard: "My lessons" for students and "My schedule" for teachers, in the browser's timezone. The full-page agent chat is on `/chat` (`NEXT_PUBLIC_API_URL=http://localhost:2024`, `NEXT_PUBLIC_ASSISTANT_ID=agent`) until the side panel replaces it.
+Copy `frontend/.env.example` to `frontend/.env` and set the Clerk keys, `NEXT_PUBLIC_LESSONS_API_URL` (default `http://localhost:8001`), `NEXT_PUBLIC_API_URL` (Agent Server, default `http://localhost:2024`) and `NEXT_PUBLIC_ASSISTANT_ID` (default `agent`), then `make frontend`.
+
+- `/` is the lessons dashboard: "My lessons" for students and "My schedule" for teachers, in the browser's timezone.
+- "Ask assistant" (bottom right) opens the lesson assistant in a panel on the right (full screen on phones). The dashboard stays usable next to it. The open state and the conversation are in the URL (`?chat=1&threadId=…`), so a reload restores both.
+- Every booking, new lesson or cancellation the agent proposes shows an approval card with a plain-language summary. Approve runs it; Reject (with an optional reason) tells the agent nothing happened. The composer is disabled while an approval is pending.
+- When a run finishes after a successful write, the dashboard reloads its lessons.
+- Each run sends the browser's timezone as run context, and requests that start a run get a freshly minted Clerk token.
 
 ## Agent
 
@@ -42,6 +48,16 @@ make agent                         # Agent Server on http://127.0.0.1:2024
 - Tools: `list_my_lessons` and `cancel_lesson` for everyone, `list_teachers`, `find_available_lessons` and `book_lesson` for students, `create_lesson` for teachers, plus `get_current_datetime`. The model only sees its role's tools, and the API enforces roles anyway. Tool calls are capped at 10 per run.
 - Every `book_lesson`, `create_lesson` and `cancel_lesson` call pauses the run with a LangChain `HITLRequest` (`action_requests` with a plain-language `description`, `review_configs` allowing `approve` and `reject`). Resume the thread with `Command(resume={"decisions": [{"type": "approve"}]})` or `{"type": "reject", "message": "..."}`; nothing changes until a write is approved.
 - The user's session token travels with each run so the agent's tools can call the lessons API as that user. It is never part of graph state, checkpoints or model messages; Agent Server keeps it in the run record, readable only by the thread's owner, and it expires about a minute after it was minted. The frontend mints a fresh token for every request that starts a run.
+
+## Run everything
+
+Do the Clerk setup in [docs/README.md](docs/README.md#local-setup-after-the-refactor) once, fill in the three `.env` files, then in three terminals:
+
+```sh
+make api        # lessons API on :8001
+make agent      # Agent Server on :2024
+make frontend   # Next.js on :3000
+```
 
 ## Verify and develop
 

@@ -91,15 +91,30 @@ async def authenticate(authorization: str | None) -> Auth.types.MinimalUserDict:
     }
 
 
+def _stamp_owner(value: dict, identity: str) -> None:
+    """
+    Record the owner in the new resource's metadata.
+
+    The server keeps its own reference to the metadata dict, so it must be
+    changed in place; replacing an empty dict would silently drop the owner.
+
+    Args:
+        value: The create request the auth handler received.
+        identity: The caller's user ID.
+    """
+
+    if value.get("metadata") is None:
+        value["metadata"] = {}
+    value["metadata"][OWNER_KEY] = identity
+
+
 @auth.on.threads.create
 async def on_thread_create(
     ctx: Auth.types.AuthContext, value: Auth.types.on.threads.create.value
 ) -> Auth.types.FilterType:
     """Stamp a new thread with its owner."""
 
-    metadata = value.setdefault("metadata", {}) or {}
-    metadata[OWNER_KEY] = ctx.user.identity
-    value["metadata"] = metadata
+    _stamp_owner(value, ctx.user.identity)
     return {OWNER_KEY: ctx.user.identity}
 
 
@@ -109,9 +124,7 @@ async def on_run_create(
 ) -> Auth.types.FilterType:
     """Stamp a new run with its owner; runs only start on the owner's threads."""
 
-    metadata = value.setdefault("metadata", {}) or {}
-    metadata[OWNER_KEY] = ctx.user.identity
-    value["metadata"] = metadata
+    _stamp_owner(value, ctx.user.identity)
     return {OWNER_KEY: ctx.user.identity}
 
 
