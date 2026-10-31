@@ -5,6 +5,9 @@
   "graphs": {
     "agent": "tech_support_agent.graph:build_agent"
   },
+  "auth": {
+    "path": "./src/tech_support_agent/auth.py:auth"
+  },
   "env": ".env",
   "image_distro": "wolfi"
 }

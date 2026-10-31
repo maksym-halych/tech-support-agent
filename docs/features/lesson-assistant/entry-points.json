@@ -1,0 +1,24 @@
+{
+  "feature": "lesson-assistant",
+  "entry_points": [
+    {"app": "agent", "kind": "config", "name": "Agent Server graph and auth", "file": "agent/langgraph.json"},
+    {"app": "agent", "kind": "graph", "name": "build_agent (make agent)", "file": "agent/src/tech_support_agent/graph.py", "symbol": "build_agent"},
+    {"app": "agent", "kind": "prompt", "name": "System prompt", "file": "agent/src/tech_support_agent/prompts.py", "symbol": "SYSTEM_PROMPT"},
+    {"app": "agent", "kind": "middleware", "name": "Dynamic prompt", "file": "agent/src/tech_support_agent/middleware/prompt.py", "symbol": "lesson_prompt"},
+    {"app": "agent", "kind": "middleware", "name": "Tools for the role", "file": "agent/src/tech_support_agent/middleware/roles.py", "symbol": "RoleToolsMiddleware"},
+    {"app": "agent", "kind": "middleware", "name": "Tool call limit", "file": "agent/src/tech_support_agent/middleware/limits.py", "symbol": "tool_call_limit"},
+    {"app": "agent", "kind": "middleware", "name": "Approval before writes", "file": "agent/src/tech_support_agent/middleware/approval.py", "symbol": "LessonApprovalMiddleware"},
+    {"app": "agent", "kind": "tools", "name": "Tool list and role map", "file": "agent/src/tech_support_agent/tools/registry.py", "symbol": "TOOLS"},
+    {"app": "agent", "kind": "client", "name": "Lessons API client", "file": "agent/src/tech_support_agent/lessons/client.py", "symbol": "LessonsClient"},
+    {"app": "frontend", "kind": "component", "name": "Chat panel", "file": "frontend/src/components/chat-panel/ChatPanel.tsx", "symbol": "ChatPanel"},
+    {"app": "frontend", "kind": "component", "name": "Approval card", "file": "frontend/src/components/chat-panel/ApprovalCard.tsx", "symbol": "ApprovalCard"},
+    {"app": "frontend", "kind": "provider", "name": "Agent stream", "file": "frontend/src/providers/Stream.tsx", "symbol": "StreamProvider"}
+  ],
+  "tests": [
+    "agent/tests/test_graph.py",
+    "agent/tests/test_approval.py",
+    "agent/tests/test_lesson_tools.py",
+    "agent/tests/test_lessons_client.py",
+    "agent/tests/test_middleware.py"
+  ]
+}

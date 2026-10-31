@@ -1,0 +1,23 @@
+{
+  "feature": "lesson-scheduling",
+  "entry_points": [
+    {"app": "api", "kind": "http", "name": "GET /me", "file": "api/src/lessons_api/app.py", "symbol": "get_me"},
+    {"app": "api", "kind": "http", "name": "GET /teachers", "file": "api/src/lessons_api/app.py", "symbol": "list_teachers"},
+    {"app": "api", "kind": "http", "name": "GET /lessons/mine", "file": "api/src/lessons_api/app.py", "symbol": "list_my_lessons"},
+    {"app": "api", "kind": "http", "name": "GET /lessons/available", "file": "api/src/lessons_api/app.py", "symbol": "list_available_lessons"},
+    {"app": "api", "kind": "http", "name": "GET /lessons/{lesson_id}", "file": "api/src/lessons_api/app.py", "symbol": "get_lesson"},
+    {"app": "api", "kind": "http", "name": "POST /lessons", "file": "api/src/lessons_api/app.py", "symbol": "create_lesson"},
+    {"app": "api", "kind": "http", "name": "POST /lessons/{lesson_id}/book", "file": "api/src/lessons_api/app.py", "symbol": "book_lesson"},
+    {"app": "api", "kind": "http", "name": "POST /lessons/{lesson_id}/cancel", "file": "api/src/lessons_api/app.py", "symbol": "cancel_lesson"},
+    {"app": "api", "kind": "service", "name": "Lesson rules", "file": "api/src/lessons_api/service.py", "symbol": "LessonService"},
+    {"app": "api", "kind": "cli", "name": "lessons-api (make api)", "file": "api/src/lessons_api/main.py", "symbol": "main"},
+    {"app": "api", "kind": "cli", "name": "lessons-api-export-openapi", "file": "api/src/lessons_api/main.py", "symbol": "export_openapi"},
+    {"app": "frontend", "kind": "page", "name": "/ (lessons dashboard)", "file": "frontend/src/app/page.tsx"},
+    {"app": "frontend", "kind": "component", "name": "Dashboard", "file": "frontend/src/components/lessons/Dashboard.tsx", "symbol": "Dashboard"},
+    {"app": "frontend", "kind": "component", "name": "New lesson form", "file": "frontend/src/components/lessons/NewLessonDialog.tsx", "symbol": "NewLessonDialog"},
+    {"app": "frontend", "kind": "hook", "name": "Lessons state", "file": "frontend/src/hooks/use-lessons.tsx", "symbol": "LessonsProvider"}
+  ],
+  "tests": [
+    "api/tests/test_lessons.py"
+  ]
+}

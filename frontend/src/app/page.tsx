@@ -1,23 +1,26 @@
 "use client";
 
-import { Thread } from "@/components/thread";
-import { StreamProvider } from "@/providers/Stream";
-import { ThreadProvider } from "@/providers/Thread";
-import { ArtifactProvider } from "@/components/thread/artifact";
+import { Suspense } from "react";
+import { ChatPanel } from "@/components/chat-panel/ChatPanel";
+import { Dashboard } from "@/components/lessons/Dashboard";
 import { Toaster } from "@/components/ui/sonner";
-import React from "react";
+import { LessonsProvider } from "@/hooks/use-lessons";
+import { StreamProvider } from "@/providers/Stream";
 
-export default function DemoPage(): React.ReactNode {
+export default function HomePage() {
   return (
-    <React.Suspense fallback={<div>Loading (layout)...</div>}>
-      <Toaster />
-      <ThreadProvider>
+    // nuqs reads the URL (`chat`, `threadId`) through useSearchParams.
+    <Suspense>
+      <LessonsProvider>
         <StreamProvider>
-          <ArtifactProvider>
-            <Thread />
-          </ArtifactProvider>
+          <Dashboard />
+          <ChatPanel />
+          <Toaster
+            position="top-center"
+            theme="dark"
+          />
         </StreamProvider>
-      </ThreadProvider>
-    </React.Suspense>
+      </LessonsProvider>
+    </Suspense>
   );
 }

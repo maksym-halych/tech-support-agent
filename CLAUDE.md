@@ -1,6 +1,6 @@
 # tech-support-agent
 
-The objective of this project is to develop a conversational tech support agent: a user describes a problem with their device, software, account or network in natural language, and the agent diagnoses it and walks them through a fix across follow-up turns. It runs as a LangGraph graph served by Agent Server (`agent/`), with a Next.js chat frontend based on Agent Chat UI (`frontend/`) that signs users in with Clerk.
+A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app: the lessons dashboard, where teachers open and cancel lessons and students book and cancel them, plus a right-side chat panel that talks to Agent Server through the LangGraph SDK and shows an approval card for every write. The refactor that produced this layout is documented task by task in `docs/`; keep its notes in sync when you change these areas.
 
 ## Role
 
@@ -10,9 +10,16 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 
 ## Quick Context
 
-- Language: Python 3.14 (use explicit `uv run --python 3.14`)
-- Framework: LangChain + LangGraph (served by Agent Server)
-- Package Manager: uv
+- Language: Python 3.14 (`api/`, `agent/`), TypeScript/Next.js (`frontend/`)
+- Frameworks: FastAPI; LangChain `create_agent` with middleware, served by Agent Server (`langgraph dev`); an OpenAI-compatible chat model
+- Package managers: uv for both Python projects, pnpm for the frontend
+- Run: `make api`, `make agent` and `make frontend` in separate terminals; `make test` and `make lint` verify both Python projects
+- Identity is the Clerk session JWT only. The API and Agent Server both verify it; the role comes from the `role` claim and only `teacher` makes a teacher
+- The agent acts as the signed-in user; the user's token must never reach model messages, graph state, checkpoints or logs
+- Lesson rules (who may book, cancel or create what) live in `api/`; the agent only proposes actions and the API enforces them
+- Every lesson write goes through `HumanInTheLoopMiddleware`; never add a write tool without adding it to `WRITE_TOOLS` and the approval middleware
+- Frontend checks: `pnpm -C frontend lint`, `pnpm -C frontend format:check`, `pnpm -C frontend build`
+- Feature docs live in `docs/features/<feature>/` (10 files each, ASD-STE100 English). Read the feature's docs before you change it. After a code change, check the touched features through their `entry-points.json`; if the docs no longer match the code, ask "Update the feature docs?" and, on yes, update them in the same commit. See `docs/features/README.md`
 
 ## Coding Conventions
 

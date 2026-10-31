@@ -56,5 +56,4 @@ data/
 # Riptide artifacts (cloud-synced)
 .humanlayer/tasks/
 
-# Riptide artifacts (cloud-synced)
-.humanlayer/tasks/
+api/data/
