@@ -129,9 +129,9 @@ class InvestigationSettings(BaseSettings):
 
     model: str = Field(min_length=1, max_length=200)
     model_api_key: SecretStr
-    model_base_url: Literal["https://openrouter.ai/api/v1"] = (
-        "https://openrouter.ai/api/v1"
-    )
+    model_base_url: Literal[
+        "https://api.openai.com/v1", "https://openrouter.ai/api/v1"
+    ] = "https://api.openai.com/v1"
     telegram_bot_token: SecretStr
     telegram_user_id: int = Field(gt=0, strict=False)
     telegram_chat_id: int = Field(gt=0, strict=False)

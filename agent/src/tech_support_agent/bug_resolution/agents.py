@@ -49,13 +49,13 @@ class StageRun[T: BaseModel](Contract):
 
 
 def create_bug_model(settings: InvestigationSettings) -> BaseChatModel:
-    """Create exactly the configured OpenRouter model, with no fallback or tracing."""
+    """Create the configured provider model without automatic provider fallback."""
 
     return ChatOpenAI(
         model=settings.model,
         api_key=settings.model_api_key.get_secret_value(),
         base_url=settings.model_base_url,
-        use_responses_api=False,
+        use_responses_api=settings.model_base_url == "https://api.openai.com/v1",
         max_retries=0,
         timeout=settings.stage_seconds,
     )

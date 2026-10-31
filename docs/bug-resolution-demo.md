@@ -25,7 +25,7 @@ Set server-only values in `agent/.env` or the process environment:
 | `BUG_WORKER_TOKEN`, `BUG_WORKER_URL` | Same random token in public server and worker; URL must be `http://127.0.0.1:<port>` (default 2025). |
 | `BUG_DEMO_REPO`, `BUG_DEMO_REPO_DIR` | Confirmed `owner/name` and absolute external local repository directory. No repository is guessed or created. |
 | `BUG_SANDBOX_IMAGE` | Explicitly prepared trusted image. |
-| `BUG_MODEL`, `BUG_MODEL_API_KEY`, `BUG_MODEL_BASE_URL` | Operator-confirmed OpenRouter model ID and credentials; endpoint is `https://openrouter.ai/api/v1`. No fallback model. |
+| `BUG_MODEL`, `BUG_MODEL_API_KEY`, `BUG_MODEL_BASE_URL` | Exact model ID and matching provider credentials. OpenAI (default): `https://api.openai.com/v1`, Responses API. OpenRouter: `https://openrouter.ai/api/v1`, Chat Completions. No provider/model fallback. |
 | `BUG_TELEGRAM_BOT_TOKEN`, `BUG_TELEGRAM_USER_ID`, `BUG_TELEGRAM_CHAT_ID` | Authorized private user/chat; open the bot conversation first. |
 | `BUG_ARTIFACTS_DIR` | Existing absolute regular directory with no symlink ancestors; restrict directory access to the operator. Evidence is retained here. |
 | `BUG_GITHUB_TOKEN`, `BUG_GITHUB_WORKFLOW_ID` | Explicit host-only token and numeric ID of `.github/workflows/verify.yml` in the selected repository. |
@@ -33,6 +33,8 @@ Set server-only values in `agent/.env` or the process environment:
 | `BUG_CI_POLL_SECONDS` | CI polling interval, default 10 seconds. |
 
 The GitHub token needs repository contents write, pull requests write, and Actions read access, plus any organization-required authorization. Repository permission metadata alone cannot prove every fine-grained token scope or branch rule. Do not grant broader access just to make a test pass.
+
+To explicitly reuse existing OpenAI settings in `agent/.env`, set `BUG_MODEL=${AGENT_MODEL}`, `BUG_MODEL_API_KEY=${OPENAI_API_KEY}`, and `BUG_MODEL_BASE_URL=https://api.openai.com/v1`. Dotenv expands these references; keep the original settings above them. Never send an OpenAI key to the OpenRouter endpoint. OpenAI investigation preflight and the real Telegram delivery test passed on 2026-10-31; this does not establish end-to-end fix/publication readiness or remove the safety lockdown described above.
 
 ## Preflight
 
