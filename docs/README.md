@@ -28,6 +28,7 @@ agent/  Agent Server :2024  ─── tools forward the user's JWT ───▶ 
 | Roles | `role` claim in the Clerk session token, sourced from the user's `publicMetadata.role`. Only the exact value `teacher` makes a teacher; anything else, including a missing claim, is `student`. |
 | Agent | One `create_agent` served by Agent Server, with typed tools that call the lessons API. No subagent. The generic OpenAPI catalog, HTTP executor, dispatch journal and CLI from this branch are removed. |
 | Dashboard actions | Every lesson action is also a dashboard control (New lesson, Book, Cancel), calling the same API endpoints as the agent's tools. The assistant is help for users who cannot find how to do something, not the only way to act. |
+| Support FAQ | How-to answers come from `agent/src/tech_support_agent/faq/faq.md` through the `search_faq` tool, so the assistant answers from maintained text, not from guesses. Term search, no embeddings: the FAQ is small. |
 | Write approval | `HumanInTheLoopMiddleware` interrupts before every create, book or cancel. The chat panel renders an approve/reject card. |
 | Authentication | The Clerk JWT is the only identity. The API and Agent Server both verify it against Clerk's JWKS. The agent forwards the caller's token to the API, so the API enforces the same permissions for UI and agent calls. The model never sees the token. |
 | Python | 3.14 for `agent/` and `api/`. `langgraph-cli[inmem]` 0.4.40 / `langgraph-api` 0.17.0 install on 3.14. |
@@ -43,6 +44,7 @@ agent/  Agent Server :2024  ─── tools forward the user's JWT ───▶ 
 | 4 | [Lesson tools with write approval](tasks/04-lesson-tools.md) | 3 | Done |
 | 5 | [Right-side chat panel](tasks/05-chat-panel.md) | 4 | Done |
 | 6 | [Lesson actions in the dashboard](tasks/06-dashboard-actions.md) | 5 | Done |
+| 7 | [FAQ for the assistant](tasks/07-faq.md) | 6 | Done |
 
 ## Local setup after the refactor
 

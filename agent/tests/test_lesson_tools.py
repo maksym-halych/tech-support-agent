@@ -31,6 +31,7 @@ async def test_students_see_student_tools(lessons_api: FakeLessonsApi) -> None:
         "get_current_datetime",
         "list_my_lessons",
         "list_teachers",
+        "search_faq",
     ]
 
 
@@ -42,17 +43,18 @@ async def test_teachers_see_teacher_tools(lessons_api: FakeLessonsApi) -> None:
         "create_lesson",
         "get_current_datetime",
         "list_my_lessons",
+        "search_faq",
     ]
 
 
-async def test_nobody_signed_in_sees_only_the_clock() -> None:
+async def test_nobody_signed_in_sees_only_the_clock_and_faq() -> None:
     model = scripted_model(AIMessage(content="Please sign in"))
     agent = create_lessons_agent(model)
 
     await agent.ainvoke({"messages": [HumanMessage("Book")]})
 
-    assert model.tool_names[0] == ["get_current_datetime"]
-    assert tool_names_for(None) == {"get_current_datetime"}
+    assert model.tool_names[0] == ["get_current_datetime", "search_faq"]
+    assert tool_names_for(None) == {"get_current_datetime", "search_faq"}
 
 
 def test_every_tool_belongs_to_some_role() -> None:

@@ -25,8 +25,16 @@ import { useChatOpen } from "./use-chat-open";
 import { useRefreshAfterWrites } from "./use-refresh-after-writes";
 
 const STARTERS: Record<Role, string[]> = {
-  student: ["Find me a lesson tomorrow", "Cancel my next lesson"],
-  teacher: ["Open a lesson on Friday at 10:00", "Cancel my next lesson"],
+  student: [
+    "How do I book a lesson?",
+    "Find me a lesson tomorrow",
+    "Cancel my next lesson",
+  ],
+  teacher: [
+    "How do I open a lesson?",
+    "Open a lesson on Friday at 10:00",
+    "Cancel my next lesson",
+  ],
 };
 
 function errorMessage(error: unknown): string {
@@ -48,8 +56,8 @@ function EmptyState({
         <p className="font-medium">How can I help?</p>
         <p className="text-sm text-muted-foreground">
           {role === "teacher"
-            ? "I can open new lesson slots and cancel your lessons."
-            : "I can find and book lessons, and cancel your bookings."}
+            ? "Ask how anything in the app works, or let me open and cancel lessons for you."
+            : "Ask how anything in the app works, or let me find, book and cancel lessons for you."}
         </p>
       </div>
       {role && (

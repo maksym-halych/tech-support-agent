@@ -13,9 +13,11 @@ from tech_support_agent.tools.find_available_lessons import find_available_lesso
 from tech_support_agent.tools.get_current_datetime import get_current_datetime
 from tech_support_agent.tools.list_my_lessons import list_my_lessons
 from tech_support_agent.tools.list_teachers import list_teachers
+from tech_support_agent.tools.search_faq import search_faq
 
 TOOLS: list[BaseTool] = [
     get_current_datetime,
+    search_faq,
     list_my_lessons,
     list_teachers,
     find_available_lessons,
@@ -27,7 +29,7 @@ TOOLS: list[BaseTool] = [
 # Tools that change lessons; each needs the user's approval.
 WRITE_TOOLS = frozenset({"book_lesson", "create_lesson", "cancel_lesson"})
 
-_ANYONE = frozenset({"get_current_datetime"})
+_ANYONE = frozenset({"get_current_datetime", "search_faq"})
 _SIGNED_IN = _ANYONE | {"list_my_lessons", "cancel_lesson"}
 ROLE_TOOLS: dict[str | None, frozenset[str]] = {
     None: _ANYONE,
