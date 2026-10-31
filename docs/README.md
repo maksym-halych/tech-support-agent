@@ -53,7 +53,7 @@ agent/  Agent Server :2024  ─── tools forward the user's JWT ───▶ 
 Clerk dashboard setup, done once per Clerk instance:
 
 1. Sessions → Customize session token → add `{"role": "{{user.public_metadata.role}}", "name": "{{user.full_name}}", "email": "{{user.primary_email_address}}"}`.
-2. To make a user a teacher, set their public metadata to `{"role": "teacher"}` (Users → user → Metadata). Every other user is a student.
+2. To make a user a teacher, set their public metadata to `{"role": "teacher"}` (Users → user → Metadata), or run `make teacher EMAIL=...` (`make users` lists users and roles, `make student EMAIL=...` reverts; both read `CLERK_SECRET_KEY` from `frontend/.env`). Every other user is a student. The user signs out and back in to get a token with the new role.
 
 ## Verification notes
 

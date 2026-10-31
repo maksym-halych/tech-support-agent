@@ -1,4 +1,4 @@
-.PHONY: help install api agent frontend test lint pre-commit
+.PHONY: help install api agent frontend users teacher student test lint pre-commit
 
 help:
 	@echo 'Targets:'
@@ -6,6 +6,9 @@ help:
 	@echo '  api             Start the lessons API on port 8001'
 	@echo '  agent           Start Agent Server on port 2024'
 	@echo '  frontend        Start the frontend on port 3000'
+	@echo '  users           List Clerk users and their roles'
+	@echo '  teacher         Make a Clerk user a teacher: make teacher EMAIL=...'
+	@echo '  student         Make a Clerk user a student: make student EMAIL=...'
 	@echo '  test            Run all tests'
 	@echo '  lint            Run ruff over both Python projects'
 	@echo '  pre-commit      Run all pre-commit hooks against every file'
@@ -22,6 +25,16 @@ agent:
 
 frontend:
 	pnpm -C frontend dev
+
+# Roles live in Clerk public metadata; these read CLERK_SECRET_KEY from frontend/.env.
+users:
+	uv run --directory api lessons-api-role
+
+teacher:
+	uv run --directory api lessons-api-role "$(EMAIL)" --role teacher
+
+student:
+	uv run --directory api lessons-api-role "$(EMAIL)" --role student
 
 test:
 	uv run --directory api python -m pytest tests -q

@@ -6,6 +6,8 @@ Three apps for the PolyTech Code Fest project: a lessons API (`api/`), a lesson 
 
 FastAPI and SQLite, package `lessons_api`. Every request needs a Clerk session token as `Authorization: Bearer`. The API verifies it against the Clerk instance's JWKS (signature, `iss`, `exp`, `nbf`, and `azp` when configured) and records the caller as a user. The token's `role` claim decides the role: only `teacher` makes a teacher, anything else is a student. See [docs/README.md](docs/README.md#local-setup-after-the-refactor) for the Clerk session-token customisation.
 
+To make a Clerk user a teacher from the CLI, run `make teacher EMAIL=...` (`make users` lists users and roles). It reads `CLERK_SECRET_KEY` from `frontend/.env`.
+
 ```sh
 cp api/.env.example api/.env   # set LESSONS_API_CLERK_ISSUER to your Clerk frontend API URL
 make api                       # http://127.0.0.1:8001, Swagger at /docs

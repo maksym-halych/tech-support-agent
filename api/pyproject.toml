@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 lessons-api = "lessons_api.main:main"
 lessons-api-export-openapi = "lessons_api.main:export_openapi"
+lessons-api-role = "lessons_api.roles:main"
 
 [build-system]
 requires = ["uv_build>=0.8.15,<0.12.0"]
