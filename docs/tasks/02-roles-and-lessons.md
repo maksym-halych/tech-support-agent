@@ -33,6 +33,8 @@ Rules:
 - A teacher cannot create a lesson overlapping another non-cancelled lesson of theirs (409).
 - Booking a lesson already booked by the same student returns the booking unchanged (natural idempotency); booked by someone else returns 409.
 - Duration 15–240 minutes; subject 1–100 characters.
+- A student cannot book a lesson that overlaps another of their bookings (409).
+- Teacher cancellation keeps the student on the lesson, so the student sees it as cancelled; cancelling an already cancelled lesson is a no-op.
 
 ## Endpoints
 
@@ -43,8 +45,8 @@ All endpoints require a valid JWT. Responses are Pydantic models; times are ISO 
 | GET | `/me` | any | Current user: id, name, email, role |
 | GET | `/teachers` | any | Teachers known to the API |
 | GET | `/lessons/mine?include_past=false` | any | Student: lessons they booked. Teacher: lessons they created, any status |
-| GET | `/lessons/available?date_from=&date_to=&teacher_id=` | student | Open future lessons |
-| GET | `/lessons/{id}` | owner | One lesson the caller teaches or booked |
+| GET | `/lessons/available?starts_after=&starts_before=&teacher_id=&limit=` | student | Open future lessons; bounds are ISO 8601 datetimes with an offset |
+| GET | `/lessons/{id}` | owner | One lesson the caller teaches or booked, or, for students, an open future lesson (the agent shows it before booking) |
 | POST | `/lessons` | teacher | Create an open lesson `{subject, starts_at, duration_minutes}` |
 | POST | `/lessons/{id}/book` | student | Book an open lesson |
 | POST | `/lessons/{id}/cancel` | owner | Student: cancel own booking, lesson reopens. Teacher: cancel own lesson |
@@ -81,3 +83,10 @@ Dependency: `pyjwt[crypto]` for verification with a cached `PyJWKClient`.
 ## Out of scope
 
 Booking or cancelling buttons in the dashboard (the agent does writes in tasks 4–5). Agent changes.
+
+## Implementation notes
+
+- `api/src/lessons_api/`: `auth.py` (Clerk verification, `TokenVerifier` with an injectable key resolver), `service.py` (lesson rules), `storage.py` (SQLite, `BEGIN IMMEDIATE` transactions under a lock), `app.py` (routes and error mapping), `config.py`, `main.py`.
+- Unreachable Clerk JWKS → 503 rather than 401.
+- The agent's generic OpenAPI stack still needs the old demo contract, so that demo moved to `agent/tests/demo_api.py` as a test fixture and the agent no longer depends on `../api`. Task 3 deletes both.
+- The browser pane cannot sign in to Clerk, so the dashboard was verified with `pnpm lint`, `pnpm format:check`, `pnpm build` and live API calls (401 without or with a forged token, CORS preflight), not with a signed-in session.

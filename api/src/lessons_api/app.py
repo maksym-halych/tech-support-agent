@@ -1,168 +1,188 @@
 """FastAPI application factory."""
 
 from collections.abc import Callable
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
-from uuid import uuid4
-from zoneinfo import ZoneInfo
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import AwareDatetime
 
-from lessons_api.auth import current_user
-from lessons_api.models import TIMEZONE, Booking, CreateBooking, Slot, Teacher
-from lessons_api.storage import BookingStore, SlotTakenError
+from lessons_api.auth import TokenVerifier, verified_caller
+from lessons_api.models import Caller, CreateLesson, Lesson, Teacher
+from lessons_api.service import (
+    ConflictError,
+    ForbiddenError,
+    InvalidRequestError,
+    LessonError,
+    LessonService,
+    NotFoundError,
+)
+from lessons_api.storage import Store
 
-TEACHERS = [
-    Teacher(id="iryna", name="Ірина Коваль", subject="English"),
-    Teacher(id="oleh", name="Олег Мельник", subject="English"),
-]
+ERROR_STATUS: dict[type[LessonError], int] = {
+    InvalidRequestError: 422,
+    ForbiddenError: 403,
+    NotFoundError: 404,
+    ConflictError: 409,
+}
+
+ERROR_RESPONSES = {
+    401: {"description": "Missing, invalid or expired Clerk session token"},
+    403: {"description": "The caller's role may not do this"},
+    404: {"description": "Lesson not found or not visible to the caller"},
+    409: {"description": "The lesson's state does not allow this"},
+}
 
 
-def _slots(lesson_date: date, now: datetime) -> list[Slot]:
-    if lesson_date.weekday() >= 5:
-        return []
-    slots = []
-    for teacher in TEACHERS:
-        for hour in (10, 14, 16):
-            start = datetime.combine(lesson_date, time(hour), ZoneInfo(TIMEZONE))
-            if start > now:
-                slots.append(
-                    Slot(
-                        id=f"{teacher.id}:{lesson_date.isoformat()}:{hour:02d}",
-                        teacher_id=teacher.id,
-                        teacher_name=teacher.name,
-                        starts_at=start,
-                        ends_at=start + timedelta(hours=1),
-                    )
-                )
-    return slots
+def _service(request: Request) -> LessonService:
+    return request.app.state.service
+
+
+def current_caller(
+    caller: Annotated[Caller, Depends(verified_caller)],
+    service: Annotated[LessonService, Depends(_service)],
+) -> Caller:
+    """
+    Authenticate the request and record the caller as a known user.
+
+    Args:
+        caller: The caller from the verified session token.
+        service: The app's lesson service.
+
+    Returns:
+        The caller.
+    """
+
+    service.sign_in(caller)
+    return caller
+
+
+CallerDep = Annotated[Caller, Depends(current_caller)]
+ServiceDep = Annotated[LessonService, Depends(_service)]
 
 
 def create_app(
-    database: Path | str = ":memory:", clock: Callable[[], datetime] | None = None
+    verifier: TokenVerifier,
+    database: Path | str = ":memory:",
+    clock: Callable[[], datetime] | None = None,
+    cors_origins: list[str] | None = None,
 ) -> FastAPI:
     """
-    Create an isolated service with injectable storage and clock.
+    Create the lessons API with injectable token verification, storage and clock.
 
     Args:
+        verifier: Verifies Clerk session tokens.
         database: SQLite file path, or ``:memory:`` for tests.
         clock: Returns the current time; defaults to the system clock in UTC.
+        cors_origins: Browser origins allowed to call the API.
 
     Returns:
         The FastAPI app. ``app.state.store`` holds the store; close it on shutdown.
     """
 
-    now = clock if clock is not None else lambda: datetime.now(UTC)
-    store = BookingStore(database)
+    store = Store(database)
     app = FastAPI(
-        title="Lesson booking demo",
-        version="1.0.0",
-        description="Find teachers, look up free slots by an exact local date, then book a selected slot for the authenticated user. All times use Europe/Kyiv. Reuse Idempotency-Key only for an identical booking request.",
+        title="Lessons API",
+        version="2.0.0",
+        description="Teachers open lesson slots, students book them, and either side cancels. Every request needs a Clerk session token as `Authorization: Bearer`; the token's `role` claim decides whether the caller is a teacher or a student. Times are ISO 8601; responses use UTC.",
     )
-    app.openapi_version = "3.1.0"
     app.state.store = store
+    app.state.service = LessonService(store, clock or (lambda: datetime.now(UTC)))
+    app.state.verifier = verifier
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins or [],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+    @app.exception_handler(LessonError)
+    def lesson_error(request: Request, error: LessonError) -> JSONResponse:
+        """Translate a rule violation into its HTTP status."""
+
+        return JSONResponse({"detail": str(error)}, ERROR_STATUS[type(error)])
+
+    @app.get("/me", operation_id="get_me", responses=ERROR_RESPONSES)
+    def get_me(caller: CallerDep) -> Caller:
+        """Return the signed-in user and their role."""
+
+        return caller
+
+    @app.get("/teachers", operation_id="list_teachers", responses=ERROR_RESPONSES)
+    def list_teachers(caller: CallerDep, service: ServiceDep) -> list[Teacher]:
+        """List teachers who have signed in at least once."""
+
+        return service.list_teachers()
+
+    @app.get("/lessons/mine", operation_id="list_my_lessons", responses=ERROR_RESPONSES)
+    def list_my_lessons(
+        caller: CallerDep, service: ServiceDep, include_past: bool = False
+    ) -> list[Lesson]:
+        """Students get lessons they booked; teachers get lessons they created, in any status."""
+
+        return service.my_lessons(caller, include_past)
 
     @app.get(
-        "/teachers",
-        operation_id="list_teachers",
-        summary="List English lesson teachers",
+        "/lessons/available",
+        operation_id="list_available_lessons",
+        responses=ERROR_RESPONSES,
     )
-    def list_teachers(user: Annotated[str, Depends(current_user)]) -> list[Teacher]:
-        """Return the teachers available in the demo."""
-
-        return TEACHERS
-
-    @app.get(
-        "/slots",
-        operation_id="list_available_slots",
-        summary="Find available slots on an exact date",
-    )
-    def list_slots(
-        lesson_date: Annotated[
-            date,
-            Query(
-                alias="date",
-                description="Exact calendar date in Europe/Kyiv, YYYY-MM-DD",
-            ),
-        ],
-        user: Annotated[str, Depends(current_user)],
+    def list_available_lessons(
+        caller: CallerDep,
+        service: ServiceDep,
+        starts_after: AwareDatetime | None = None,
+        starts_before: AwareDatetime | None = None,
         teacher_id: str | None = None,
-    ) -> list[Slot]:
-        """Return future unbooked slots; compare starts_at to the requested time."""
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    ) -> list[Lesson]:
+        """Students only: open future lessons, optionally in a time window or for one teacher."""
 
-        occupied = store.booked_slot_ids()
-        return [
-            slot
-            for slot in _slots(lesson_date, now())
-            if slot.id not in occupied
-            and (teacher_id is None or slot.teacher_id == teacher_id)
-        ]
+        return service.available_lessons(
+            caller, starts_after, starts_before, teacher_id, limit
+        )
+
+    @app.get(
+        "/lessons/{lesson_id}", operation_id="get_lesson", responses=ERROR_RESPONSES
+    )
+    def get_lesson(lesson_id: str, caller: CallerDep, service: ServiceDep) -> Lesson:
+        """A lesson the caller teaches or booked, or an open future lesson for students."""
+
+        return service.get_lesson(caller, lesson_id)
 
     @app.post(
-        "/me/bookings",
-        operation_id="create_booking",
-        summary="Book a selected slot for the current user",
+        "/lessons",
+        operation_id="create_lesson",
         status_code=201,
-        responses={
-            409: {
-                "description": "Slot is already booked or the idempotency key was used for another slot"
-            },
-            404: {"description": "The slot does not exist or is in the past"},
-        },
+        responses=ERROR_RESPONSES,
     )
-    def create_booking(
-        request: CreateBooking,
-        user: Annotated[str, Depends(current_user)],
-        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
-    ) -> Booking:
-        """Create one booking; replaying the same key returns the original booking."""
+    def create_lesson(
+        request: CreateLesson, caller: CallerDep, service: ServiceDep
+    ) -> Lesson:
+        """Teachers only: open a lesson slot that does not overlap their other lessons."""
 
-        previous = store.find_by_key(user, idempotency_key)
-        if previous is not None:
-            if previous.slot.id != request.slot_id:
-                raise HTTPException(409, "Idempotency key belongs to a different slot")
-            return previous
-        try:
-            _, day, _ = request.slot_id.split(":")
-            slot = next(
-                slot
-                for slot in _slots(date.fromisoformat(day), now())
-                if slot.id == request.slot_id
-            )
-        except ValueError, StopIteration:
-            raise HTTPException(404, "Slot does not exist or is in the past") from None
-        booking = Booking(id=str(uuid4()), slot=slot)
-        try:
-            store.insert(user, idempotency_key, booking)
-        except SlotTakenError:
-            raise HTTPException(409, "Slot is already booked") from None
-        return booking
+        return service.create_lesson(caller, request)
 
-    @app.get(
-        "/me/bookings",
-        operation_id="list_my_bookings",
-        summary="List the current user's bookings",
+    @app.post(
+        "/lessons/{lesson_id}/book",
+        operation_id="book_lesson",
+        responses=ERROR_RESPONSES,
     )
-    def list_bookings(user: Annotated[str, Depends(current_user)]) -> list[Booking]:
-        """Return only bookings belonging to the authenticated user."""
+    def book_lesson(lesson_id: str, caller: CallerDep, service: ServiceDep) -> Lesson:
+        """Students only: book an open lesson. Repeating the call returns the same booking."""
 
-        return store.list_for_user(user)
+        return service.book_lesson(caller, lesson_id)
 
-    @app.get(
-        "/me/bookings/{booking_id}",
-        operation_id="get_my_booking",
-        summary="Get a confirmed booking by ID",
-        responses={404: {"description": "Booking not found for the current user"}},
+    @app.post(
+        "/lessons/{lesson_id}/cancel",
+        operation_id="cancel_lesson",
+        responses=ERROR_RESPONSES,
     )
-    def get_booking(
-        booking_id: str, user: Annotated[str, Depends(current_user)]
-    ) -> Booking:
-        """Look up one booking without revealing other users' records."""
+    def cancel_lesson(lesson_id: str, caller: CallerDep, service: ServiceDep) -> Lesson:
+        """Students cancel their booking and the lesson reopens; teachers cancel the lesson."""
 
-        booking = store.get_for_user(booking_id, user)
-        if booking is None:
-            raise HTTPException(404, "Booking not found")
-        return booking
+        return service.cancel_lesson(caller, lesson_id)
 
     return app

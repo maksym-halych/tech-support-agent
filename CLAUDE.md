@@ -1,6 +1,6 @@
 # tech-support-agent
 
-The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. Python CLI and the lessons API in `api/` (a separate uv project, package `lessons_api`) demonstrate the flow. A future orchestrator will connect this subgraph and a separate bug-fixing/PR agent to the existing Next.js/Clerk frontend; orchestration and frontend integration are outside this implementation.
+The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. The lessons API in `api/` (a separate uv project, package `lessons_api`) verifies Clerk session tokens and serves lessons for students and teachers; the frontend's home page is the lessons dashboard. The generic subgraph is being replaced by an Agent Server lesson assistant; follow the task plan in `docs/` (tasks 1–2 are done).
 
 ## Role
 

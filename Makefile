@@ -1,12 +1,11 @@
-.PHONY: help install api agent export-openapi frontend test lint pre-commit
+.PHONY: help install api agent frontend test lint pre-commit
 
 help:
 	@echo 'Targets:'
 	@echo '  install         Install the API and agent dependencies'
 	@echo '  api             Start the lessons API on port 8001'
 	@echo '  agent           Start the support chat in the terminal'
-	@echo '  export-openapi  Refresh the agent example OpenAPI document from the API'
-	@echo '  frontend        Start the frontend (orchestrator connection pending)'
+	@echo '  frontend        Start the frontend on port 3000'
 	@echo '  test            Run all tests'
 	@echo '  lint            Run ruff over both Python projects'
 	@echo '  pre-commit      Run all pre-commit hooks against every file'
@@ -20,9 +19,6 @@ api:
 
 agent:
 	uv run --directory agent support-chat
-
-export-openapi:
-	uv run --directory api lessons-api-export-openapi --output ../agent/examples/lessons.openapi.json
 
 frontend:
 	pnpm -C frontend dev

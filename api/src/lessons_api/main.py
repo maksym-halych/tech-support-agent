@@ -3,10 +3,12 @@
 import argparse
 import json
 from pathlib import Path
+from typing import NoReturn
 
 import uvicorn
 
 from lessons_api.app import create_app
+from lessons_api.auth import TokenVerifier, jwks_key_resolver
 from lessons_api.config import get_settings
 
 
@@ -16,9 +18,13 @@ def export_openapi() -> None:
     parser = argparse.ArgumentParser(description="Export the lessons API contract")
     parser.add_argument("--output", type=Path, default=Path("openapi.json"))
     args = parser.parse_args()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    app = create_app()
+
+    def no_keys(token: str) -> NoReturn:
+        raise RuntimeError("Exporting the contract never verifies tokens")
+
+    app = create_app(TokenVerifier("https://clerk.invalid", [], no_keys))
     try:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(app.openapi(), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
@@ -32,7 +38,14 @@ def main() -> None:
 
     settings = get_settings()
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
-    app = create_app(settings.database_path)
+    verifier = TokenVerifier(
+        settings.clerk_issuer,
+        settings.clerk_authorized_parties,
+        jwks_key_resolver(settings.clerk_issuer),
+    )
+    app = create_app(
+        verifier, settings.database_path, cors_origins=settings.cors_origins
+    )
     try:
         uvicorn.run(app, host=settings.host, port=settings.port)
     finally:

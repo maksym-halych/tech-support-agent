@@ -1,25 +1,36 @@
-# OpenAPI support agent
+# Lessons platform
 
-Python 3.14 / LangGraph support subgraph for the PolyTech Code Fest project. The agent discovers capabilities from a local OpenAPI document, gathers parameters in conversation, executes API reads, and pauses for separate human approval before every write. Lesson booking is a demonstration API served by the separate `api/` project; the graph has no booking-specific tools.
+Three apps for the PolyTech Code Fest project: a lessons API (`api/`), a Next.js/Clerk frontend (`frontend/`) and a LangGraph agent (`agent/`). Teachers open lesson slots, students book them, and either side can cancel. The refactor that turns the agent into an Agent Server lesson assistant with a side chat is planned task by task in [`docs/`](docs/README.md).
 
-## Run the local demo
+## Lessons API
 
-Install [uv](https://docs.astral.sh/uv/), then copy `agent/.env.example` to `agent/.env`. Set `OPENAI_API_KEY` for your provider; `OPENAI_BASE_URL` and `AGENT_MODEL` retain their existing OpenAI defaults and also support OpenRouter or other compatible providers. Python 3.14 is selected by uv.
+FastAPI and SQLite, package `lessons_api`. Every request needs a Clerk session token as `Authorization: Bearer`. The API verifies it against the Clerk instance's JWKS (signature, `iss`, `exp`, `nbf`, and `azp` when configured) and records the caller as a user. The token's `role` claim decides the role: only `teacher` makes a teacher, anything else is a student. See [docs/README.md](docs/README.md#local-setup-after-the-refactor) for the Clerk session-token customisation.
 
 ```sh
-uv sync --directory api
-uv sync --directory agent
-# Terminal 1: persistent local lessons API on 127.0.0.1:8001
-uv run --directory api lessons-api
-# Terminal 2: interactive chat
-uv run --directory agent support-chat
+cp api/.env.example api/.env   # set LESSONS_API_CLERK_ISSUER to your Clerk frontend API URL
+make api                       # http://127.0.0.1:8001, Swagger at /docs
 ```
 
-Equivalent Make targets: `make install`, `make api`, `make agent`. The CLI prints its thread ID. Resume it with `uv run --directory agent support-chat --thread-id <id>`. Use `/exit` to leave a conversation. A pending write offers `approve`, `reject`, or `exit`; exiting preserves the pending action. To change a choice, reject it first and send a new message.
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| GET | `/me` | anyone | Current user and role |
+| GET | `/teachers` | anyone | Teachers who have signed in |
+| GET | `/lessons/mine?include_past=false` | anyone | Student: lessons they booked. Teacher: lessons they created |
+| GET | `/lessons/available?starts_after=&starts_before=&teacher_id=&limit=` | student | Open future lessons |
+| GET | `/lessons/{id}` | teacher of it, its student, or any student while it is open | One lesson |
+| POST | `/lessons` | teacher | Open a lesson `{subject, starts_at, duration_minutes}` (15–240 min, future, no overlap) |
+| POST | `/lessons/{id}/book` | student | Book an open lesson; repeating it returns the same booking |
+| POST | `/lessons/{id}/cancel` | student or teacher | Student: cancel the booking, the lesson reopens. Teacher: cancel the lesson |
 
-Try “Запиши мене на урок наступного вівторка о 14:00”. The API offers two teachers with weekday slots at 10:00, 14:00 and 16:00 in `Europe/Kyiv`. The agent queries slots, asks you to choose, presents the exact action, waits for approval, and returns the booking result. Dates in the demo are generated relative to the API clock, so future weekdays continue to work.
+Missing or invalid token → 401, wrong role → 403, unknown or invisible lesson → 404, state conflict (already booked, cancelled, started, overlapping) → 409. Data lives in `api/data/lessons.sqlite`, which Git ignores.
 
-The local API uses deliberately public test tokens `demo-alice` and `demo-bob`; set both `SUPPORT_USER_ID` and `SUPPORT_API_TOKEN` when switching users and start a new thread. These tokens are only for this loopback demonstration. Swagger UI is at `http://127.0.0.1:8001/docs`. Bookings persist under `api/data/`; graph checkpoints and dispatch receipts persist under `agent/data/`. Git ignores both.
+## Frontend
+
+Copy `frontend/.env.example` to `frontend/.env`, set the Clerk keys and `NEXT_PUBLIC_LESSONS_API_URL` (default `http://localhost:8001`), then `make frontend`. After signing in, `/` shows the lessons dashboard: "My lessons" for students and "My schedule" for teachers, in the browser's timezone. The full-page agent chat is on `/chat` until the side panel replaces it.
+
+## Legacy OpenAPI support agent
+
+The rest of this README describes the generic OpenAPI support subgraph that is still in `agent/`. It is removed in [task 3](docs/tasks/03-agent-server.md). Its demo booking API now lives only in `agent/tests/demo_api.py` as a test fixture, so the CLI (`make agent`) has no live API to talk to; `uv run --directory agent python -m tests.smoke_demo` runs the whole flow over real loopback HTTP with a scripted model.
 
 ## Configure another API
 
@@ -97,10 +108,8 @@ uv run --directory agent ruff format --check src tests
 uv run --directory agent pip-audit
 # Real loopback HTTP and CLI recovery, with a scripted model (no API key):
 uv run --directory agent python -m tests.smoke_demo
-# Refresh the example contract after changing the API:
-make export-openapi
 ```
 
 Tests use scripted models and isolated HTTP transports without external keys. They cover approval and rejection, stale approval, SQLite recovery, ownership, idempotency and conflicts, uncertain writes, credential handling, schema validation, timezones, tool limits, parent composition, and a second inventory API contract.
 
-`api/` is the lessons API (FastAPI, SQLite, package `lessons_api`), a separate uv project with its own tests. `agent/src/tech_support_agent/` contains the graph, typed boundaries, OpenAPI catalog, HTTP executor, dispatch journal and CLI. `agent/examples/lessons.openapi.json` is exported from the API with `make export-openapi`; agent tests import `lessons_api` as an editable dev dependency. The existing Next.js/Clerk `frontend/` is retained for the future orchestrator. This version does not run Agent Server or expose a frontend backend; the orchestrator, PR agent and chat integration are separate work.
+`api/` is the lessons API (FastAPI, SQLite, package `lessons_api`), a separate uv project with its own tests. `agent/src/tech_support_agent/` contains the graph, typed boundaries, OpenAPI catalog, HTTP executor, dispatch journal and CLI. `agent/examples/lessons.openapi.json` is the contract of the test demo in `agent/tests/demo_api.py`.

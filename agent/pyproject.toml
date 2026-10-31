@@ -32,7 +32,8 @@ dev = [
     "pre-commit>=4.6.2",
     "pytest>=9.0.3",
     "ruff>=0.8.0",
-    "lessons-api",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
 ]
 
 [tool.ruff]
@@ -59,6 +60,3 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.uv.build-backend]
 module-name = "tech_support_agent"
 source-include = [".env.example", "examples/**", "tests/**"]
-
-[tool.uv.sources]
-lessons-api = { path = "../api", editable = true }
