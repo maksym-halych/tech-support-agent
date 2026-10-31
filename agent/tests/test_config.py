@@ -15,7 +15,7 @@ def defaults() -> Any:
 
 
 def test_default_model() -> None:
-    assert defaults().agent_model == "openai/gpt-6.1-sol"
+    assert defaults().agent_model == "gpt-6.1-sol"
 
 
 def test_model_read_from_env(monkeypatch) -> None:
@@ -28,8 +28,8 @@ def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
 
 
-def test_base_url_defaults_to_openrouter() -> None:
-    assert defaults().openai_base_url == "https://openrouter.ai/api/v1"
+def test_base_url_defaults_to_openai() -> None:
+    assert defaults().openai_base_url == "https://api.openai.com/v1"
 
 
 def test_base_url_read_from_env(monkeypatch) -> None:

@@ -19,10 +19,19 @@ def test_build_agent_wires_a_tool_node() -> None:
     assert "tools" in build_agent().nodes
 
 
-def test_chat_model_targets_the_base_url_over_chat_completions() -> None:
+def test_chat_model_targets_openai_over_the_responses_api() -> None:
     model = create_chat_model(Settings(_env_file=None))
 
-    assert model.model_name == "openai/gpt-6.1-sol"
+    assert model.model_name == "gpt-6.1-sol"
+    assert model.openai_api_base == "https://api.openai.com/v1"
+    assert model.use_responses_api is True
+
+
+def test_chat_model_targets_other_providers_over_chat_completions() -> None:
+    settings = Settings(_env_file=None, openai_base_url="https://openrouter.ai/api/v1")
+
+    model = create_chat_model(settings)
+
     assert model.openai_api_base == "https://openrouter.ai/api/v1"
     assert model.use_responses_api is False
 

@@ -15,15 +15,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # A model id as the provider at ``openai_base_url`` names it. OpenRouter,
-    # the default, uses ``<provider>/<model>``: https://openrouter.ai/models.
-    agent_model: str = "openai/gpt-6.1-sol"
+    # A model id as the provider at ``openai_base_url`` names it: bare on
+    # OpenAI, the default, ``<provider>/<model>`` on OpenRouter.
+    agent_model: str = "gpt-6.1-sol"
 
-    # Any provider that speaks the OpenAI chat completions API: OpenRouter by
-    # default, or https://api.openai.com/v1, or a local server. The key is
+    # Any provider that speaks the OpenAI chat completions API: OpenAI by
+    # default, or https://openrouter.ai/api/v1, or a local server. The key is
     # that provider's. Secret.
     openai_api_key: SecretStr = SecretStr("")
-    openai_base_url: str = "https://openrouter.ai/api/v1"
+    openai_base_url: str = "https://api.openai.com/v1"
 
 
 @lru_cache

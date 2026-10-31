@@ -1,6 +1,6 @@
 """Bounds on how the model calls tools within one turn."""
 
-from typing import Any, Optional
+from typing import Any
 
 from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.messages import ToolMessage
@@ -19,7 +19,7 @@ class _ToolCallLimitMiddleware(ToolCallLimitMiddleware):
     """Cap the tool calls in one run, worded so the model answers instead of retrying."""
 
     @staticmethod
-    def _reword(update: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    def _reword(update: dict[str, Any] | None) -> dict[str, Any] | None:
         """
         Replace the stock refusal text on blocked tool calls with ours.
 
@@ -41,9 +41,7 @@ class _ToolCallLimitMiddleware(ToolCallLimitMiddleware):
         ]
         return update
 
-    def after_model(
-        self, state: Any, runtime: Runtime[Any]
-    ) -> Optional[dict[str, Any]]:
+    def after_model(self, state: Any, runtime: Runtime[Any]) -> dict[str, Any] | None:
         """
         Count this model call's tool calls and refuse those over the limit.
 
@@ -59,7 +57,7 @@ class _ToolCallLimitMiddleware(ToolCallLimitMiddleware):
 
     async def aafter_model(
         self, state: Any, runtime: Runtime[Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Count this model call's tool calls and refuse those over the limit.
 

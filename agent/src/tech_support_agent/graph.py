@@ -10,6 +10,9 @@ from tech_support_agent.middleware import tool_call_limit
 from tech_support_agent.prompts import SYSTEM_PROMPT
 from tech_support_agent.tools.registry import TOOLS
 
+# OpenAI's own endpoint, as opposed to another OpenAI-compatible provider.
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+
 
 def create_tech_support_agent(model: str | BaseChatModel) -> Pregel:
     """
@@ -35,9 +38,9 @@ def create_chat_model(settings: Settings) -> BaseChatModel:
     """
     Build the chat model the agent runs on, from any OpenAI-compatible provider.
 
-    Compatible providers such as OpenRouter implement the chat completions API
-    but not all of the newer Responses API, which ``ChatOpenAI`` picks by
-    default for recent models; it is turned off so every request goes to chat
+    OpenAI itself is called over its Responses API, which its reasoning models
+    need to call tools. Other compatible providers such as OpenRouter implement
+    the chat completions API but not all of the Responses API, so they get chat
     completions.
 
     Args:
@@ -60,7 +63,7 @@ def create_chat_model(settings: Settings) -> BaseChatModel:
         model=settings.agent_model,
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
-        use_responses_api=False,
+        use_responses_api=settings.openai_base_url.rstrip("/") == OPENAI_BASE_URL,
     )
 
 
