@@ -8,7 +8,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 
-from tech_support_agent.config import BugSettings, Settings, get_settings
+from tech_support_agent.config import BugSettings, DemoSettings, Settings, get_settings
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -50,6 +50,7 @@ def isolated_environment(
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     monkeypatch.setitem(BugSettings.model_config, "env_file", None)
+    monkeypatch.setitem(DemoSettings.model_config, "env_file", None)
     get_settings.cache_clear()
     connect = socket.socket.connect
 

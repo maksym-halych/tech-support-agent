@@ -1,14 +1,26 @@
 """Authenticated loopback API; the private graph has no HTTP resume surface."""
 
+import asyncio
 import json
 import logging
 import secrets
 from collections.abc import AsyncIterator, Awaitable, Callable
 from urllib.parse import urlsplit
 
-from aiohttp import web
+from aiohttp import ClientSession, web
 from pydantic import ValidationError
 
+from tech_support_agent.bug_resolution.adapters.github import (
+    GitHubAdapter,
+    GitPublisher,
+    HostCLI,
+)
+from tech_support_agent.bug_resolution.adapters.sandbox import (
+    ImageArtifact,
+    capture_profile,
+)
+from tech_support_agent.bug_resolution.adapters.telegram import TelegramClient
+from tech_support_agent.bug_resolution.agents import create_bug_model
 from tech_support_agent.bug_resolution.contracts import (
     MAX_BODY_BYTES,
     CaseRequest,
@@ -20,12 +32,19 @@ from tech_support_agent.bug_resolution.coordinator import (
     CaseNotFound,
     CaseUnavailable,
 )
-from tech_support_agent.bug_resolution.graph import (
-    IntakeServices,
-    unavailable_delivery,
-    unavailable_investigator,
+from tech_support_agent.bug_resolution.preflight import check_model
+from tech_support_agent.bug_resolution.publication import Publisher
+from tech_support_agent.bug_resolution.publication_contracts import (
+    GitHubCredentials,
+    PublisherConfig,
 )
-from tech_support_agent.config import BugSettings
+from tech_support_agent.bug_resolution.runtime import Phase3Runtime
+from tech_support_agent.config import (
+    BugSettings,
+    DemoSettings,
+    InvestigationSettings,
+    PublicationSettings,
+)
 
 
 def create_app(settings: BugSettings, coordinator: CaseCoordinator) -> web.Application:
@@ -93,24 +112,99 @@ def create_app(settings: BugSettings, coordinator: CaseCoordinator) -> web.Appli
     return app
 
 
+async def create_runtime_app(
+    settings: BugSettings,
+    investigation: InvestigationSettings,
+    demo: DemoSettings,
+    publication: PublicationSettings | None = None,
+) -> web.Application:
+    """Wire actual private services and shut polling down before resources are closed."""
+
+    session = ClientSession()
+    runtime = None
+    cli = None
+    try:
+        publication = publication or PublicationSettings()
+        profile = await capture_profile(demo, settings.scenario)
+        model = create_bug_model(investigation)
+        await check_model(model)
+        artifacts: dict[str, ImageArtifact] = {}
+        telegram = TelegramClient(
+            session,
+            investigation.telegram_bot_token,
+            investigation.telegram_chat_id,
+            investigation.telegram_user_id,
+            artifacts,
+            investigation.artifacts_dir,
+        )
+        await telegram.identity()
+        publisher = None
+        if publication.publication_authorized:
+            config = PublisherConfig(
+                repo=profile.repo,
+                base_branch=f"demo/{profile.scenario}",
+                workflow_id=publication.github_workflow_id,
+                live_authorized=True,
+            )
+            cli = HostCLI(config, GitHubCredentials(token=publication.github_token))
+            publisher = Publisher(config, GitPublisher(cli), GitHubAdapter(cli))
+        runtime = Phase3Runtime(
+            investigation,
+            profile,
+            model,
+            telegram,
+            artifacts,
+            publisher=publisher,
+            poll_interval=publication.ci_poll_seconds,
+        )
+        coordinator = CaseCoordinator(runtime.services())
+        app = create_app(settings, coordinator)
+
+        async def resources(app: web.Application) -> AsyncIterator[None]:
+            poller = asyncio.create_task(
+                telegram.poll(coordinator.consume_callback, coordinator.consume_reply)
+            )
+            try:
+                yield
+            finally:
+                poller.cancel()
+                await asyncio.gather(poller, return_exceptions=True)
+                await coordinator.close()
+                try:
+                    await runtime.close()
+                finally:
+                    if cli:
+                        cli.close()
+                    await session.close()
+
+        app.cleanup_ctx.append(resources)
+        return app
+    except BaseException:
+        try:
+            if runtime:
+                await runtime.close()
+        finally:
+            if cli:
+                cli.close()
+            await session.close()
+        raise
+
+
 def main() -> None:
-    """Start a loopback worker; unimplemented services fail closed, never succeed."""
+    """Start the real Phase 3 worker only with explicit configured private targets."""
 
     try:
         settings = BugSettings()
+        investigation = InvestigationSettings()
+        demo = DemoSettings()
+        publication = PublicationSettings()
     except ValidationError:
         raise SystemExit(
-            "Invalid bug-worker configuration; check BUG_WORKER_TOKEN and BUG_WORKER_URL"
+            "Invalid bug-worker configuration; configure BUG worker, model, demo, artifact and Telegram settings"
         ) from None
     logging.basicConfig(level=logging.INFO)
-    logging.getLogger(__name__).warning(
-        "Investigator and team delivery are not wired; cases will fail closed"
-    )
-    coordinator = CaseCoordinator(
-        IntakeServices(unavailable_investigator, unavailable_delivery)
-    )
     web.run_app(
-        create_app(settings, coordinator),
+        create_runtime_app(settings, investigation, demo, publication),
         host="127.0.0.1",
         port=urlsplit(settings.worker_url).port,
         access_log=None,

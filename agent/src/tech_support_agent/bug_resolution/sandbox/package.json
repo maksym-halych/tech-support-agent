@@ -1,0 +1,7 @@
+{
+  "name": "bug-sandbox-runner",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "dependencies": { "playwright": "1.56.1" }
+}

@@ -8,6 +8,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from tech_support_agent.bug_resolution.contracts import (
     MAX_BODY_BYTES,
+    MAX_PUBLIC_RESPONSE_BYTES,
     CaseReceipt,
     CaseRequest,
     ClarificationRequest,
@@ -63,9 +64,9 @@ class PrivateAPI:
                     raise WorkerUnavailable()
                 raw = bytearray()
                 async for chunk in response.content.iter_chunked(8192):
-                    raw.extend(chunk)
-                    if len(raw) > 65536:
+                    if len(raw) + len(chunk) > MAX_PUBLIC_RESPONSE_BYTES:
                         raise WorkerUnavailable()
+                    raw.extend(chunk)
                 return response_type.validate_json(bytes(raw))
         except ClientError, TimeoutError, ValidationError, ValueError:
             raise WorkerUnavailable() from None

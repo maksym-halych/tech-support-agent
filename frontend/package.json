@@ -16,7 +16,8 @@
     "lint": "NODE_OPTIONS='--require ./scripts/use-typescript6.cjs' eslint .",
     "lint:fix": "NODE_OPTIONS='--require ./scripts/use-typescript6.cjs' eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "playwright test tests/bug-handoff.spec.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.4",

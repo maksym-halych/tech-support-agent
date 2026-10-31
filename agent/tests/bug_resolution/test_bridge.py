@@ -2,7 +2,7 @@ import asyncio
 import json
 
 import pytest
-from aiohttp import web
+from aiohttp import ClientSession, web
 from aiohttp.test_utils import TestServer
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
@@ -18,7 +18,13 @@ from tech_support_agent.bug_resolution.bridge import (
     UNAVAILABLE_TEXT,
     PublicBridge,
 )
-from tech_support_agent.bug_resolution.contracts import HANDOFF_TEXT
+from tech_support_agent.bug_resolution.contracts import (
+    HANDOFF_TEXT,
+    MAX_PUBLIC_RESPONSE_BYTES,
+    MAX_TEXT_CHARACTERS,
+    Pending,
+    PublicEventQuery,
+)
 from tech_support_agent.bug_resolution.coordinator import CaseCoordinator
 from tech_support_agent.bug_resolution.demo_graph import create_demo_graph
 from tests.bug_resolution.conftest import (
@@ -209,7 +215,9 @@ async def test_http_client_bounds_and_sanitizes_response(
         if mode == "timeout":
             await asyncio.sleep(0.15)
         return web.Response(
-            body=b"x" * 65537
+            body=b'{"status":"busy","case_id":null}'.ljust(
+                MAX_PUBLIC_RESPONSE_BYTES + 1
+            )
             if mode == "oversize"
             else json.dumps(
                 {"status": "accepted", "private_summary": PRIVATE_SENTINEL}
@@ -256,3 +264,77 @@ async def test_lost_answer_response_replays_without_second_investigation(
     assert lost_response["messages"][0].id == replayed["messages"][0].id
     assert services.trace == ["investigate", "investigate", "team_report"]
     assert len(coordinator.records) == 1
+
+
+@pytest.mark.parametrize(
+    "character", ["\u0436", "\U0001f680"], ids=["cyrillic", "astral"]
+)
+async def test_max_unicode_question_crosses_http_and_releases_slot(
+    api: PrivateAPI,
+    coordinator: CaseCoordinator,
+    services: FakeServices,
+    character: str,
+) -> None:
+    services.question = character * MAX_TEXT_CHARACTERS
+    graph = create_demo_graph(api, InMemorySaver())
+    config = {"configurable": {"thread_id": "unicode-thread"}}
+    initial = await graph.ainvoke(
+        {"messages": [HumanMessage("Continue fails", id="report")]}, config
+    )
+    case_id = initial["bridge"]["case_id"]
+    async with (
+        ClientSession() as session,
+        session.get(
+            f"{api.settings.worker_url}/cases/{case_id}/public-event",
+            params={"source_thread_id": "unicode-thread", "after": 0},
+            headers={"Authorization": f"Bearer {TOKEN}"},
+        ) as response,
+    ):
+        assert response.status == 200
+        raw = await response.read()
+    assert 65536 < len(raw) <= MAX_PUBLIC_RESPONSE_BYTES
+    assert json.loads(raw)["question"] == services.question
+    assert initial["messages"][-1].content == services.question
+    assert initial["bridge"]["cursor"] == 1
+    assert coordinator.active == case_id
+    finished = await graph.ainvoke(
+        {"messages": [HumanMessage("Grade 3", id="answer")]}, config
+    )
+    assert finished["messages"][-1].content == HANDOFF_TEXT
+    await until(lambda: coordinator.active is None)
+    assert services.trace == ["investigate", "investigate", "team_report"]
+    assert (await api.accept_case(report("next-thread"))).status == "accepted"
+
+
+@pytest.mark.parametrize("chunked", [False, True], ids=["content-length", "chunked"])
+@pytest.mark.parametrize("extra_bytes", [0, 1], ids=["at-limit", "over-limit"])
+async def test_public_response_byte_limit_over_http(
+    api: PrivateAPI, chunked: bool, extra_bytes: int
+) -> None:
+    payload = b'{"status":"pending"}'.ljust(MAX_PUBLIC_RESPONSE_BYTES + extra_bytes)
+
+    async def handler(request: web.Request) -> web.StreamResponse:
+        if not chunked:
+            return web.Response(body=payload, content_type="application/json")
+        response = web.StreamResponse(headers={"Content-Type": "application/json"})
+        response.enable_chunked_encoding()
+        await response.prepare(request)
+        for offset in range(0, len(payload), 8192):
+            await response.write(payload[offset : offset + 8192])
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_get("/cases/test-case/public-event", handler)
+    async with TestServer(app, host="127.0.0.1") as server:
+        client = PrivateAPI(
+            api.settings.model_copy(
+                update={"worker_url": str(server.make_url("")).rstrip("/")}
+            )
+        )
+        query = PublicEventQuery(source_thread_id="thread")
+        if extra_bytes:
+            with pytest.raises(WorkerUnavailable):
+                await client.public_event("test-case", query)
+        else:
+            assert isinstance(await client.public_event("test-case", query), Pending)

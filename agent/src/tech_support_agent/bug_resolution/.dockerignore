@@ -1,0 +1,10 @@
+**
+!sandbox/
+!sandbox/Dockerfile
+!sandbox/package.json
+!sandbox/pnpm-lock.yaml
+!sandbox/*.mjs
+!demo_template/
+!demo_template/**
+**/node_modules
+**/__pycache__
