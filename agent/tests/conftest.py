@@ -3,7 +3,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import uuid4
 
+import httpx
 import pytest
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
@@ -13,6 +15,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import RunnableConfig
 
 from tech_support_agent.config import Settings
+from tests.fake_lessons_api import FakeLessonsApi
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +37,8 @@ def settings(monkeypatch: pytest.MonkeyPatch, isolate_environment: None) -> Sett
     """Pin the settings ``build_agent`` reads, ignoring the developer's .env."""
 
     pinned = Settings(_env_file=None)
-    monkeypatch.setattr("tech_support_agent.graph.get_settings", lambda: pinned)
+    for module in ("graph", "lessons.client", "auth"):
+        monkeypatch.setattr(f"tech_support_agent.{module}.get_settings", lambda: pinned)
     return pinned
 
 
@@ -46,8 +50,10 @@ class FakeToolCallingModel(GenericFakeChatModel):
     """
 
     prompts: list[list[BaseMessage]] = []
+    tool_names: list[list[str]] = []
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> BaseChatModel:
+        self.tool_names.append(sorted(getattr(tool, "name", "") for tool in tools))
         return self
 
     def _generate(
@@ -64,7 +70,7 @@ class FakeToolCallingModel(GenericFakeChatModel):
 def scripted_model(*messages: AIMessage) -> FakeToolCallingModel:
     """Build a fake model that answers each model call with the next message."""
 
-    return FakeToolCallingModel(messages=iter(messages), prompts=[])
+    return FakeToolCallingModel(messages=iter(messages), prompts=[], tool_names=[])
 
 
 def tool_call_message(name: str, count: int = 1, **args: Any) -> AIMessage:
@@ -75,6 +81,17 @@ def tool_call_message(name: str, count: int = 1, **args: Any) -> AIMessage:
         tool_calls=[
             {"name": name, "args": args, "id": f"call-{i}", "type": "tool_call"}
             for i in range(count)
+        ],
+    )
+
+
+def call(name: str, **args: Any) -> AIMessage:
+    """Build an AI message with one tool call, with a unique ID."""
+
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {"name": name, "args": args, "id": f"call-{uuid4()}", "type": "tool_call"}
         ],
     )
 
@@ -101,3 +118,45 @@ def as_user(
 
     user = ServerUser(identity, name, {"role": role, "access_token": token})
     return {"configurable": {"langgraph_auth_user": user}}
+
+
+STUDENT = {
+    "identity": "user_alice",
+    "name": "Alice",
+    "role": "student",
+    "token": "student-token",
+}
+TEACHER = {
+    "identity": "user_tom",
+    "name": "Tom Teacher",
+    "role": "teacher",
+    "token": "teacher-token",
+}
+
+
+def as_student(thread_id: str = "t1") -> RunnableConfig:
+    """Run config for the student Alice on a thread."""
+
+    config = as_user(**STUDENT)
+    config["configurable"]["thread_id"] = thread_id
+    return config
+
+
+def as_teacher(thread_id: str = "t1") -> RunnableConfig:
+    """Run config for the teacher Tom on a thread."""
+
+    config = as_user(**TEACHER)
+    config["configurable"]["thread_id"] = thread_id
+    return config
+
+
+@pytest.fixture
+def lessons_api(monkeypatch: pytest.MonkeyPatch) -> FakeLessonsApi:
+    """Serve the lessons API from memory for every client the tools build."""
+
+    fake = FakeLessonsApi()
+    transport = httpx.MockTransport(fake.handle)
+    monkeypatch.setattr(
+        "tech_support_agent.lessons.client.default_transport", lambda: transport
+    )
+    return fake

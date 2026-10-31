@@ -56,3 +56,13 @@ Update the system prompt with the workflow: list or search first, show options w
 - A teacher can ask "open a 60-minute English lesson on Friday at 10:00", approve, and see it in their schedule.
 - Either role can cancel through the agent with approval; rejecting leaves the lesson unchanged.
 - `pytest`, `ruff check`, `ruff format --check` pass.
+
+## Implementation notes
+
+- Files: `lessons/client.py` (`LessonsClient`, `client_for`), `lessons/models.py` (API models and `LessonView`), one module per tool under `tools/` plus `tools/shared.py`, `tools/registry.py` (`TOOLS`, `WRITE_TOOLS`, `tool_names_for`), `middleware/roles.py` (`RoleToolsMiddleware`), `middleware/approval.py` (`LessonApprovalMiddleware`).
+- Tool errors are raised as `ToolException` with `handle_tool_error=True`, so they reach the model (and the frontend) as `ToolMessage`s with `status="error"`. A 401 from the API is reported as an expired session; 5xx and network errors get generic messages.
+- `find_available_lessons` takes local calendar days (`date_from`, optional `date_to`, at most 31 days) and searches `[date_from 00:00, date_to + 1 day 00:00)` in the run timezone. `create_lesson` reads a `starts_at` without an offset as local time in the run timezone.
+- Batched HITL interrupts (`HITLRequest`) with approve/reject. The description factory is synchronous, so `LessonApprovalMiddleware.aafter_model` first fetches the lessons that pending `book_lesson`/`cancel_lesson` calls refer to (concurrently, via `GET /lessons/{id}`) and hands them to the factory through a context variable; if a lesson cannot be fetched, the description uses the lesson as an earlier tool result showed it, and otherwise says its details could not be loaded. A `when` predicate skips approval for tools the user's role cannot use; those calls fail inside the tool without calling the API.
+- Middleware order: dynamic prompt, role filter, tool call limit, approval.
+- Verified against the real lessons API over HTTP (test-signed tokens, scripted model): a teacher creates a lesson after approval, a student finds and books it, a second student's booking returns "Someone else has already booked this lesson", a rejected cancellation changes nothing, the teacher's schedule shows the booking, and the teacher's cancellation is described with the student's name.
+- The `/chat` page cannot answer approvals yet (it only shows a generic interrupt view); the approval card is task 5.

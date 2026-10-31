@@ -39,7 +39,8 @@ make agent                         # Agent Server on http://127.0.0.1:2024
 
 - Model: any OpenAI-compatible provider (`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AGENT_MODEL`). OpenAI's own endpoint is called over the Responses API, other providers over chat completions.
 - Run context: the frontend sends `context: {"timezone": "<IANA name>"}` with each run (default `Europe/Kyiv`). The system prompt adds the user's name, role, timezone and local time.
-- Tools are capped at 10 calls per run.
+- Tools: `list_my_lessons` and `cancel_lesson` for everyone, `list_teachers`, `find_available_lessons` and `book_lesson` for students, `create_lesson` for teachers, plus `get_current_datetime`. The model only sees its role's tools, and the API enforces roles anyway. Tool calls are capped at 10 per run.
+- Every `book_lesson`, `create_lesson` and `cancel_lesson` call pauses the run with a LangChain `HITLRequest` (`action_requests` with a plain-language `description`, `review_configs` allowing `approve` and `reject`). Resume the thread with `Command(resume={"decisions": [{"type": "approve"}]})` or `{"type": "reject", "message": "..."}`; nothing changes until a write is approved.
 - The user's session token travels with each run so the agent's tools can call the lessons API as that user. It is never part of graph state, checkpoints or model messages; Agent Server keeps it in the run record, readable only by the thread's owner, and it expires about a minute after it was minted. The frontend mints a fresh token for every request that starts a run.
 
 ## Verify and develop

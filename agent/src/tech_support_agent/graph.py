@@ -4,22 +4,32 @@ from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from langgraph.pregel import Pregel
+from langgraph.types import Checkpointer
 
 from tech_support_agent.config import Settings, get_settings
 from tech_support_agent.context import AgentContext
-from tech_support_agent.middleware import lesson_prompt, tool_call_limit
+from tech_support_agent.middleware import (
+    LessonApprovalMiddleware,
+    RoleToolsMiddleware,
+    lesson_prompt,
+    tool_call_limit,
+)
 from tech_support_agent.tools.registry import TOOLS
 
 # OpenAI's own endpoint, as opposed to another OpenAI-compatible provider.
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
-def create_lessons_agent(model: str | BaseChatModel) -> Pregel:
+def create_lessons_agent(
+    model: str | BaseChatModel, checkpointer: Checkpointer | None = None
+) -> Pregel:
     """
     Assemble the lesson assistant around a model.
 
     Args:
         model: A ``provider:model`` string or a chat model instance.
+        checkpointer: Saves threads; Agent Server supplies its own, so only
+            tests pass one.
 
     Returns:
         The compiled agent.
@@ -28,8 +38,14 @@ def create_lessons_agent(model: str | BaseChatModel) -> Pregel:
     return create_agent(
         model=model,
         tools=TOOLS,
-        middleware=[lesson_prompt, tool_call_limit()],
+        middleware=[
+            lesson_prompt,
+            RoleToolsMiddleware(),
+            tool_call_limit(),
+            LessonApprovalMiddleware(),
+        ],
         context_schema=AgentContext,
+        checkpointer=checkpointer,
         name="lessons_agent",
     )
 
