@@ -102,8 +102,8 @@ const StreamSession = ({
 
   const client = useMemo(
     () =>
-      createClient(apiUrl, apiKey ?? undefined, authScheme, () =>
-        getTokenRef.current(),
+      createClient(apiUrl, apiKey ?? undefined, authScheme, (options) =>
+        getTokenRef.current(options),
       ),
     [apiUrl, apiKey, authScheme],
   );

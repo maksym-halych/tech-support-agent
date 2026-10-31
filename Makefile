@@ -4,7 +4,7 @@ help:
 	@echo 'Targets:'
 	@echo '  install         Install the API and agent dependencies'
 	@echo '  api             Start the lessons API on port 8001'
-	@echo '  agent           Start the support chat in the terminal'
+	@echo '  agent           Start Agent Server on port 2024'
 	@echo '  frontend        Start the frontend on port 3000'
 	@echo '  test            Run all tests'
 	@echo '  lint            Run ruff over both Python projects'
@@ -18,7 +18,7 @@ api:
 	uv run --directory api lessons-api
 
 agent:
-	uv run --directory agent support-chat
+	uv run --directory agent langgraph dev --no-browser
 
 frontend:
 	pnpm -C frontend dev

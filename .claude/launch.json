@@ -4,14 +4,36 @@
     {
       "name": "frontend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["-C", "frontend", "dev"],
+      "runtimeArgs": [
+        "-C",
+        "frontend",
+        "dev"
+      ],
       "port": 3000
     },
     {
       "name": "api",
       "runtimeExecutable": "uv",
-      "runtimeArgs": ["run", "--directory", "api", "lessons-api"],
+      "runtimeArgs": [
+        "run",
+        "--directory",
+        "api",
+        "lessons-api"
+      ],
       "port": 8001
+    },
+    {
+      "name": "agent",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--directory",
+        "agent",
+        "langgraph",
+        "dev",
+        "--no-browser"
+      ],
+      "port": 2024
     }
   ]
 }

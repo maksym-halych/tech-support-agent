@@ -1,6 +1,6 @@
 # tech-support-agent
 
-The project implements an OpenAPI-driven support subgraph in `agent/`. It discovers operations from a local specification, gathers parameters in conversation, executes reads, and requires separate human approval before every write. The lessons API in `api/` (a separate uv project, package `lessons_api`) verifies Clerk session tokens and serves lessons for students and teachers; the frontend's home page is the lessons dashboard. The generic subgraph is being replaced by an Agent Server lesson assistant; follow the task plan in `docs/` (tasks 1–2 are done).
+A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app with the lessons dashboard and the agent chat. The ongoing refactor is planned task by task in `docs/`; follow it and update its status column when a task is done.
 
 ## Role
 
@@ -10,14 +10,13 @@ Before finalizing code, check for: type safety, error handling, edge cases, and 
 
 ## Quick Context
 
-- Language: Python 3.14
-- Framework: LangGraph StateGraph, with an OpenAI-compatible chat model
-- Package Manager: uv
-- Run: `make api` and `make agent` in separate terminals; `make test` and `make lint` verify both Python projects
-- API credentials belong only in trusted runtime context, never in model messages, checkpoints, or logs
-- Keep business-domain rules in `api/` or integration code, not in the generic graph or catalog
-- Persist a dispatch receipt before a write; never automatically repeat an uncertain write
-- The embedding application owns authentication, thread access control, and serialized execution per thread
+- Language: Python 3.14 (`api/`, `agent/`), TypeScript/Next.js (`frontend/`)
+- Frameworks: FastAPI; LangChain `create_agent` with middleware, served by Agent Server (`langgraph dev`); an OpenAI-compatible chat model
+- Package managers: uv for both Python projects, pnpm for the frontend
+- Run: `make api`, `make agent` and `make frontend` in separate terminals; `make test` and `make lint` verify both Python projects
+- Identity is the Clerk session JWT only. The API and Agent Server both verify it; the role comes from the `role` claim and only `teacher` makes a teacher
+- The agent acts as the signed-in user; the user's token must never reach model messages, graph state, checkpoints or logs
+- Lesson rules (who may book, cancel or create what) live in `api/`; the agent only proposes actions and the API enforces them
 
 ## Coding Conventions
 

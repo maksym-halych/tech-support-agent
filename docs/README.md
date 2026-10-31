@@ -38,7 +38,7 @@ agent/  Agent Server :2024  ─── tools forward the user's JWT ───▶ 
 |---|---|---|---|
 | 1 | [Extract the API into `api/`](tasks/01-extract-api.md) | — | Done |
 | 2 | [Roles, lessons and the lessons dashboard](tasks/02-roles-and-lessons.md) | 1 | Done |
-| 3 | [Back to Agent Server with Clerk auth](tasks/03-agent-server.md) | 2 | Planned |
+| 3 | [Back to Agent Server with Clerk auth](tasks/03-agent-server.md) | 2 | Done |
 | 4 | [Lesson tools with write approval](tasks/04-lesson-tools.md) | 3 | Planned |
 | 5 | [Right-side chat panel](tasks/05-chat-panel.md) | 4 | Planned |
 

@@ -45,3 +45,20 @@ def test_the_api_key_is_kept_out_of_reprs(monkeypatch) -> None:
 
     assert settings.openai_api_key.get_secret_value() == "sk-secret-part"
     assert "secret-part" not in repr(settings)
+
+
+def test_clerk_and_lessons_api_settings(monkeypatch) -> None:
+    monkeypatch.setenv("CLERK_ISSUER", "https://app.clerk.accounts.dev/")
+    monkeypatch.setenv(
+        "CLERK_AUTHORIZED_PARTIES", "http://localhost:3000, https://app.example"
+    )
+    monkeypatch.setenv("LESSONS_API_URL", "http://127.0.0.1:9000/")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.clerk_issuer == "https://app.clerk.accounts.dev"
+    assert settings.clerk_authorized_parties == [
+        "http://localhost:3000",
+        "https://app.example",
+    ]
+    assert settings.lessons_api_url == "http://127.0.0.1:9000"

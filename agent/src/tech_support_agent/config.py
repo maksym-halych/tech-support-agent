@@ -1,10 +1,10 @@
 """Runtime configuration for the agent."""
 
 from functools import lru_cache
-from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -26,22 +26,30 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = SecretStr("")
     openai_base_url: str = "https://api.openai.com/v1"
 
-    support_openapi_path: Path = Path("examples/lessons.openapi.json")
-    support_api_base_url: str = "http://127.0.0.1:8001"
-    support_idempotency_header: str | None = "Idempotency-Key"
-    support_user_id: str = "alice"
-    support_timezone: str = "Europe/Kyiv"
-    support_api_token: SecretStr = SecretStr("demo-alice")
-    support_api_keys: dict[str, SecretStr] = Field(default_factory=dict)
-    support_checkpoint_path: Path = Path("data/support.sqlite")
-    support_journal_path: Path = Path("data/actions.sqlite")
+    # Clerk frontend API URL, e.g. https://example-app.clerk.accounts.dev: the
+    # session token issuer, with its JWKS at {issuer}/.well-known/jwks.json.
+    clerk_issuer: str = ""
+    # Origins allowed in the token's ``azp`` claim; empty skips the check.
+    clerk_authorized_parties: Annotated[list[str], NoDecode] = []
 
-    @field_validator("support_idempotency_header", mode="before")
+    # The lessons API the agent's tools call as the signed-in user.
+    lessons_api_url: str = "http://127.0.0.1:8001"
+
+    @field_validator("clerk_authorized_parties", mode="before")
     @classmethod
-    def empty_header_means_disabled(cls, value: str | None) -> str | None:
-        """Allow an empty environment variable to disable idempotency headers."""
+    def split_comma_separated(cls, value: str | list[str]) -> list[str]:
+        """Accept a comma-separated string from the environment."""
 
-        return value or None
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("clerk_issuer", "lessons_api_url")
+    @classmethod
+    def strip_trailing_slash(cls, value: str) -> str:
+        """Store URLs without a trailing slash."""
+
+        return value.rstrip("/")
 
 
 @lru_cache

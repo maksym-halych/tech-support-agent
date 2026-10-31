@@ -1,91 +1,103 @@
-"""Offline models and an isolated, deterministic lessons API."""
+"""Offline models, pinned settings and a stand-in for Agent Server's user."""
 
-import json
-from collections.abc import Iterator, Sequence
-from datetime import UTC, datetime
-from pathlib import Path
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import Any
-from uuid import uuid4
 
-import httpx
 import pytest
-from fastapi import FastAPI
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
-from pydantic import SecretStr
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatResult
+from langchain_core.runnables import RunnableConfig
 
-from tech_support_agent.models import ApiConfig, ApiCredentials, SupportContext
-from tests.demo_api import create_demo_app
+from tech_support_agent.config import Settings
 
 
 @pytest.fixture(autouse=True)
 def isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give the chat model a placeholder key and keep tracing off.
+
+    The OpenAI client refuses to construct without a key, which ``build_agent``
+    does; no test calls the API, so the key never leaves the process.
+    """
+
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-placeholder")
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
-    monkeypatch.delenv("AGENT_MODEL", raising=False)
-    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    for name in ("AGENT_MODEL", "OPENAI_BASE_URL", "CLERK_ISSUER", "LESSONS_API_URL"):
+        monkeypatch.delenv(name, raising=False)
 
 
-@pytest.fixture
-def demo_app() -> Iterator[FastAPI]:
-    app = create_demo_app(clock=lambda: datetime(2026, 10, 31, 9, tzinfo=UTC))
-    yield app
-    app.state.connection.close()
+@pytest.fixture(autouse=True)
+def settings(monkeypatch: pytest.MonkeyPatch, isolate_environment: None) -> Settings:
+    """Pin the settings ``build_agent`` reads, ignoring the developer's .env."""
 
-
-@pytest.fixture
-def api_config(tmp_path: Path, demo_app: FastAPI) -> ApiConfig:
-    path = tmp_path / "openapi.json"
-    path.write_text(json.dumps(demo_app.openapi()), encoding="utf-8")
-    return ApiConfig(
-        openapi_path=path,
-        base_url="http://demo.test",
-        idempotency_header="Idempotency-Key",
-    )
-
-
-@pytest.fixture
-def context() -> SupportContext:
-    return SupportContext(
-        user_id="alice",
-        credentials=ApiCredentials(bearer_token=SecretStr("demo-alice")),
-    )
-
-
-@pytest.fixture
-def transport(demo_app: FastAPI) -> httpx.ASGITransport:
-    return httpx.ASGITransport(app=demo_app)
+    pinned = Settings(_env_file=None)
+    monkeypatch.setattr("tech_support_agent.graph.get_settings", lambda: pinned)
+    return pinned
 
 
 class FakeToolCallingModel(GenericFakeChatModel):
-    """A model replaying scripted responses; no provider requests are made."""
+    """Replays scripted messages, accepts tools and records every prompt.
+
+    ``GenericFakeChatModel`` refuses ``bind_tools``; the agent needs it, and the
+    scripted messages already carry whatever tool calls a test wants.
+    """
+
+    prompts: list[list[BaseMessage]] = []
 
     def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> BaseChatModel:
         return self
 
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        self.prompts.append(list(messages))
+        return super()._generate(messages, stop, run_manager, **kwargs)
+
 
 def scripted_model(*messages: AIMessage) -> FakeToolCallingModel:
-    return FakeToolCallingModel(messages=iter(messages))
+    """Build a fake model that answers each model call with the next message."""
+
+    return FakeToolCallingModel(messages=iter(messages), prompts=[])
 
 
-def call(name: str, **args: Any) -> AIMessage:
+def tool_call_message(name: str, count: int = 1, **args: Any) -> AIMessage:
+    """Build an AI message calling ``name`` ``count`` times in parallel."""
+
     return AIMessage(
         content="",
         tool_calls=[
-            {"name": name, "args": args, "id": f"call-{uuid4()}", "type": "tool_call"}
+            {"name": name, "args": args, "id": f"call-{i}", "type": "tool_call"}
+            for i in range(count)
         ],
     )
 
 
-def finish(message: str = "Готово", status: str = "completed") -> AIMessage:
-    return call("finish", message=message, status=status)
+@dataclass
+class ServerUser:
+    """Mimics the user object Agent Server puts in ``langgraph_auth_user``."""
+
+    identity: str
+    display_name: str
+    data: dict[str, Any] = field(default_factory=dict)
+
+    def __getitem__(self, key: str) -> Any:
+        return self.data[key]
 
 
-def booking(slot: str = "iryna:2026-11-03:14") -> AIMessage:
-    return call(
-        "call_operation",
-        operation_id="create_booking",
-        body={"slot_id": slot},
-        confirmation_summary="Записати до Ірини Коваль 3 листопада 2026 о 14:00 Europe/Kyiv",
-    )
+def as_user(
+    identity: str = "user_alice",
+    name: str = "Alice",
+    role: str = "student",
+    token: str = "clerk-session-token",
+) -> RunnableConfig:
+    """Run config that makes the agent act as a signed-in Clerk user."""
+
+    user = ServerUser(identity, name, {"role": role, "access_token": token})
+    return {"configurable": {"langgraph_auth_user": user}}
