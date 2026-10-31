@@ -1,6 +1,6 @@
 # tech-support-agent
 
-A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app: the lessons dashboard plus a right-side chat panel that talks to Agent Server through the LangGraph SDK and shows an approval card for every write. The refactor that produced this layout is documented task by task in `docs/`; keep its notes in sync when you change these areas.
+A lessons platform in three apps: `api/` is the lessons API (FastAPI, SQLite, package `lessons_api`) where teachers open lesson slots and students book and cancel them; `agent/` is a lesson assistant (LangChain `create_agent`, package `tech_support_agent`) served by LangGraph Agent Server; `frontend/` is the Next.js/Clerk app: the lessons dashboard, where teachers open and cancel lessons and students book and cancel them, plus a right-side chat panel that talks to Agent Server through the LangGraph SDK and shows an approval card for every write. The refactor that produced this layout is documented task by task in `docs/`; keep its notes in sync when you change these areas.
 
 ## Role
 

@@ -16,9 +16,11 @@ import { createLessonsApi, type Lesson, type Me } from "@/lib/lessons-api";
 interface LessonsState {
   me: Me | null;
   lessons: Lesson[];
+  /** Open lessons a student can book; always empty for teachers. */
+  available: Lesson[];
   loading: boolean;
   error: string | null;
-  /** Reload the current user and their lessons, e.g. after the agent wrote. */
+  /** Reload the current user and their lessons, e.g. after a write. */
   refresh: () => Promise<void>;
 }
 
@@ -35,6 +37,7 @@ export function LessonsProvider({ children }: { children: ReactNode }) {
 
   const [me, setMe] = useState<Me | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [available, setAvailable] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Only the latest request may update state, so a slow earlier response
@@ -49,9 +52,13 @@ export function LessonsProvider({ children }: { children: ReactNode }) {
         api.me(),
         api.myLessons(),
       ]);
+      // Only students may list open lessons; the API refuses teachers.
+      const nextAvailable =
+        nextMe.role === "student" ? await api.availableLessons() : [];
       if (request !== latest.current) return;
       setMe(nextMe);
       setLessons(nextLessons);
+      setAvailable(nextAvailable);
       setError(null);
     } catch (caught) {
       if (request !== latest.current) return;
@@ -72,8 +79,8 @@ export function LessonsProvider({ children }: { children: ReactNode }) {
   }, [isLoaded, isSignedIn, load]);
 
   const value = useMemo(
-    () => ({ me, lessons, loading, error, refresh }),
-    [me, lessons, loading, error, refresh],
+    () => ({ me, lessons, available, loading, error, refresh }),
+    [me, lessons, available, loading, error, refresh],
   );
   return (
     <LessonsContext.Provider value={value}>{children}</LessonsContext.Provider>

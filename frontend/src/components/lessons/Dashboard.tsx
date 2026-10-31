@@ -11,7 +11,8 @@ import { useLessons } from "@/hooks/use-lessons";
 import { LESSONS_API_URL } from "@/lib/lessons-api";
 import { cn } from "@/lib/utils";
 import { useChatOpen } from "@/components/chat-panel/use-chat-open";
-import { LessonSchedule } from "./LessonSchedule";
+import { AvailableLessons, LessonSchedule } from "./LessonSchedule";
+import { NewLessonDialog } from "./NewLessonDialog";
 
 const userButtonAppearance = {
   elements: { avatarBox: { height: "2rem", width: "2rem" } },
@@ -78,7 +79,7 @@ function ErrorState({ message }: { message: string }) {
 }
 
 export function Dashboard() {
-  const { me, lessons, loading, error, refresh } = useLessons();
+  const { me, lessons, available, loading, error, refresh } = useLessons();
   const [chatOpen] = useChatOpen();
   const title = me?.role === "teacher" ? "My schedule" : "My lessons";
   const subtitle =
@@ -107,15 +108,18 @@ export function Dashboard() {
               )}
             </div>
             {me && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Refresh lessons"
-                onClick={() => void refresh()}
-                disabled={loading}
-              >
-                <RefreshCw className={loading ? "animate-spin" : undefined} />
-              </Button>
+              <div className="flex items-center gap-2">
+                {me.role === "teacher" && <NewLessonDialog />}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Refresh lessons"
+                  onClick={() => void refresh()}
+                  disabled={loading}
+                >
+                  <RefreshCw className={loading ? "animate-spin" : undefined} />
+                </Button>
+              </div>
             )}
           </div>
           {error && !loading ? (
@@ -123,10 +127,25 @@ export function Dashboard() {
           ) : !me ? (
             <LoadingState />
           ) : (
-            <LessonSchedule
-              lessons={lessons}
-              role={me.role}
-            />
+            <>
+              <LessonSchedule
+                lessons={lessons}
+                role={me.role}
+              />
+              {me.role === "student" && (
+                <section className="flex flex-col gap-4 pt-4">
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight">
+                      Open lessons
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Lessons teachers have opened that you can book.
+                    </p>
+                  </div>
+                  <AvailableLessons lessons={available} />
+                </section>
+              )}
+            </>
           )}
         </div>
       </main>
